@@ -68,6 +68,10 @@
                         <i class="fas fa-download"></i>
                         <span>导出备份</span>
                     </button>
+                    <button onclick="downloadDataForCommit()" class="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition flex items-center space-x-2 text-green-300">
+                        <i class="fas fa-code"></i>
+                        <span>下载JSON</span>
+                    </button>
                     <button onclick="document.getElementById('fileInput').click()" class="px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 transition font-medium flex items-center space-x-2">
                         <i class="fas fa-file-import"></i>
                         <span>导入恢复</span>
@@ -424,24 +428,109 @@
         let useCloud = false;
         let cloudConfig = null;
 
+        // 配置：是否从本地 JSON 文件加载数据
+        const USE_LOCAL_JSON = true;
+        const DATA_URL = './data/bills.json';
+        const SETTINGS_URL = './data/settings.json';
+
         // Initialize
-        document.addEventListener('DOMContentLoaded', () => {
-            loadTierSettings();
-            loadCloudConfig();
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 首先尝试从本地 JSON 文件加载数据
+            if (USE_LOCAL_JSON) {
+                await initLocalData();
+            } else {
+                // 回退到 LocalStorage
+                loadTierSettings();
+                loadCloudConfig();
+            }
+
             renderRecentList();
             updateStats();
             updateComparisonView();
             setupBatchDragAndDrop();
-            
+
             const now = new Date();
             document.getElementById('entryDate').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-            
+
             // Try to sync from cloud on load
             if (useCloud && cloudConfig) {
                 initLeanCloud();
                 syncFromCloud();
             }
         });
+
+        // 初始化时加载本地数据
+        async function initLocalData() {
+            if (!USE_LOCAL_JSON) return;
+
+            try {
+                // 加载账单数据
+                const billsResponse = await fetch(DATA_URL + '?t=' + Date.now()); // 加时间戳防止缓存
+                if (billsResponse.ok) {
+                    const bills = await billsResponse.json();
+                    if (Array.isArray(bills) && bills.length > 0) {
+                        electricityData = bills;
+                        console.log('已从本地文件加载', bills.length, '条记录');
+                    }
+                }
+
+                // 加载阶梯设置
+                const settingsResponse = await fetch(SETTINGS_URL + '?t=' + Date.now());
+                if (settingsResponse.ok) {
+                    const settings = await settingsResponse.json();
+                    if (settings.tier1 && settings.tier2) {
+                        tierSettings = {
+                            tier1: parseInt(settings.tier1),
+                            tier2: parseInt(settings.tier2)
+                        };
+                        // 更新输入框
+                        document.getElementById('tier1Limit').value = tierSettings.tier1;
+                        document.getElementById('tier2Limit').value = tierSettings.tier2;
+                        updateTierLabels();
+                        console.log('已从本地文件加载阶梯设置');
+                    }
+                }
+
+                // 更新界面
+                renderRecentList();
+                updateStats();
+                updateComparisonView();
+
+            } catch (error) {
+                console.error('加载本地数据失败:', error);
+                // 失败时回退到 LocalStorage
+                const saved = localStorage.getItem('electricityData');
+                if (saved) electricityData = JSON.parse(saved);
+                loadTierSettings();
+            }
+        }
+
+        // 保存时生成下载（因为无法直接写入文件）
+        function downloadDataForCommit() {
+            // 下载账单数据
+            const billsDataStr = JSON.stringify(electricityData, null, 2);
+            const billsBlob = new Blob([billsDataStr], { type: 'application/json' });
+            const billsUrl = URL.createObjectURL(billsBlob);
+            const billsLink = document.createElement('a');
+            billsLink.href = billsUrl;
+            billsLink.download = 'bills.json';
+            billsLink.click();
+
+            // 下载设置
+            const settingsDataStr = JSON.stringify({
+                tier1: tierSettings.tier1,
+                tier2: tierSettings.tier2,
+                lastUpdated: new Date().toISOString().split('T')[0]
+            }, null, 2);
+            const settingsBlob = new Blob([settingsDataStr], { type: 'application/json' });
+            const settingsUrl = URL.createObjectURL(settingsBlob);
+            const settingsLink = document.createElement('a');
+            settingsLink.href = settingsUrl;
+            settingsLink.download = 'settings.json';
+            settingsLink.click();
+
+            showToast('已下载 data/bills.json 和 data/settings.json，请放入项目目录后提交');
+        }
 
         // Cloud Sync Functions
         function toggleCloudSync() {
@@ -608,22 +697,31 @@
         function addRecord(date, kwh, cost) {
             const existingIndex = electricityData.findIndex(r => r.date === date);
             const record = { date, kwh, cost, timestamp: new Date().toISOString() };
-            
+
             if (existingIndex >= 0) electricityData[existingIndex] = record;
             else electricityData.push(record);
-            
+
             electricityData.sort((a, b) => a.date.localeCompare(b.date));
             saveToLocal();
-            
+
             // Sync to cloud if enabled
             if (useCloud) {
                 syncToCloud();
             }
-            
+
+            // 如果使用本地 JSON 模式，提示用户下载更新
+            if (USE_LOCAL_JSON) {
+                setTimeout(() => {
+                    if (confirm('数据已更新到浏览器！是否下载 JSON 文件以更新项目目录？\n（下载后请放入 data/ 文件夹并 git push）')) {
+                        downloadDataForCommit();
+                    }
+                }, 500);
+            }
+
             renderRecentList();
             updateStats();
             updateCurrentTierDisplay();
-            
+
             if (currentView === 'comparison') updateComparisonView();
             else updateTierView();
         }
@@ -632,13 +730,23 @@
             electricityData = electricityData.filter(r => r.date !== date);
             saveToLocal();
             if (useCloud) syncToCloud();
+
+            // 如果使用本地 JSON 模式，提示用户下载更新
+            if (USE_LOCAL_JSON) {
+                setTimeout(() => {
+                    if (confirm('数据已从浏览器删除！是否下载 JSON 文件以更新项目目录？\n（下载后请放入 data/ 文件夹并 git push）')) {
+                        downloadDataForCommit();
+                    }
+                }, 500);
+            }
+
             renderRecentList();
             updateStats();
             updateCurrentTierDisplay();
-            
+
             if (currentView === 'comparison') updateComparisonView();
             else updateTierView();
-            
+
             showToast('删除成功');
         }
 
@@ -961,6 +1069,16 @@
             updateTierLabels();
             if (currentView === 'tier') updateTierView();
             updateCurrentTierDisplay();
+
+            // 如果使用本地 JSON 模式，提示用户下载更新
+            if (USE_LOCAL_JSON) {
+                setTimeout(() => {
+                    if (confirm('阶梯设置已更新！是否下载 settings.json 文件以更新项目目录？\n（下载后请放入 data/ 文件夹并 git push）')) {
+                        downloadDataForCommit();
+                    }
+                }, 500);
+            }
+
             showToast('阶梯设置已更新');
         }
 
