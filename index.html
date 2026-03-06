@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>电费管家 - Gitee版</title>
+    <title>家庭能耗管家 - 水电气全能版</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src='https://unpkg.com/tesseract.js@4.1.1/dist/tesseract.min.js'></script>
-    <!-- LeanCloud SDK（国内 faster） -->
-    <script src="https://cdn.jsdelivr.net/npm/leancloud-storage@4.15.2/dist/av-live-query-min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Inter', sans-serif; }
         .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .water-gradient { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
+        .gas-gradient { background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); }
+        
         .chart-container { position: relative; height: 450px; width: 100%; }
         .scan-line { position: absolute; width: 100%; height: 3px; background: linear-gradient(to right, transparent, #10b981, transparent); box-shadow: 0 0 15px #10b981; animation: scan 2s linear infinite; z-index: 10; }
         @keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
@@ -31,11 +32,11 @@
         .tier-1 { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .tier-2 { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
         .tier-3 { background-color: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-        .sync-status { position: fixed; top: 20px; right: 20px; padding: 8px 16px; border-radius: 20px; font-size: 12px; z-index: 100; display: none; }
-        .sync-status.show { display: flex; align-items: center; }
-        .sync-status.success { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
-        .sync-status.error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-        .sync-status.syncing { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+        
+        .type-tab { transition: all 0.3s ease; position: relative; overflow: hidden; }
+        .type-tab.active { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .type-tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.5); }
+        
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
@@ -43,38 +44,45 @@
 </head>
 <body class="bg-gray-50 text-gray-800">
 
-    <!-- Sync Status Indicator -->
-    <div id="syncStatus" class="sync-status">
-        <i class="fas fa-circle-notch fa-spin mr-2"></i>
-        <span>同步中...</span>
+    <!-- Type Selector Tabs -->
+    <div class="bg-white shadow-sm border-b sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex space-x-1 py-3">
+                <button onclick="switchType('electricity')" id="tab-electricity" class="type-tab active flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold flex items-center justify-center space-x-2 shadow-md">
+                    <i class="fas fa-bolt text-yellow-300"></i>
+                    <span>电费</span>
+                    <span id="badge-electricity" class="bg-white/20 text-xs px-2 py-0.5 rounded-full ml-2 hidden">0</span>
+                </button>
+                <button onclick="switchType('water')" id="tab-water" class="type-tab flex-1 bg-gray-100 text-gray-600 py-3 px-4 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:bg-blue-50 hover:text-blue-600">
+                    <i class="fas fa-tint text-blue-400"></i>
+                    <span>水费</span>
+                    <span id="badge-water" class="bg-gray-200 text-xs px-2 py-0.5 rounded-full ml-2 hidden">0</span>
+                </button>
+                <button onclick="switchType('gas')" id="tab-gas" class="type-tab flex-1 bg-gray-100 text-gray-600 py-3 px-4 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:bg-orange-50 hover:text-orange-600">
+                    <i class="fas fa-fire text-orange-400"></i>
+                    <span>燃气</span>
+                    <span id="badge-gas" class="bg-gray-200 text-xs px-2 py-0.5 rounded-full ml-2 hidden">0</span>
+                </button>
+            </div>
+        </div>
     </div>
 
     <!-- Navigation -->
-    <nav class="gradient-bg text-white shadow-lg sticky top-0 z-50">
+    <nav class="gradient-bg text-white shadow-lg sticky top-[73px] z-30">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
                 <div class="flex items-center space-x-3">
-                    <i class="fas fa-bolt text-2xl text-yellow-300"></i>
-                    <span class="font-bold text-xl tracking-tight">电费管家</span>
-                    <span class="text-xs bg-white/20 px-2 py-1 rounded-full">Gitee版</span>
+                    <i class="fas fa-home text-2xl text-white/90"></i>
+                    <span class="font-bold text-xl tracking-tight">家庭能耗管家</span>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <!-- Cloud Sync Toggle -->
-                    <button onclick="toggleCloudSync()" id="cloudSyncBtn" class="px-3 py-1.5 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-2 text-sm">
-                        <i class="fas fa-cloud"></i>
-                        <span id="cloudStatus">本地模式</span>
-                    </button>
-                    <button onclick="exportData()" class="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-2">
+                <div class="flex items-center space-x-3">
+                    <button onclick="exportAllData()" class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-2 text-sm">
                         <i class="fas fa-download"></i>
-                        <span>导出备份</span>
+                        <span class="hidden sm:inline">导出全部</span>
                     </button>
-                    <button onclick="downloadDataForCommit()" class="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg transition flex items-center space-x-2 text-green-300">
-                        <i class="fas fa-code"></i>
-                        <span>下载JSON</span>
-                    </button>
-                    <button onclick="document.getElementById('fileInput').click()" class="px-4 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 transition font-medium flex items-center space-x-2">
+                    <button onclick="document.getElementById('fileInput').click()" class="px-3 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 transition font-medium flex items-center space-x-2 text-sm">
                         <i class="fas fa-file-import"></i>
-                        <span>导入恢复</span>
+                        <span class="hidden sm:inline">导入恢复</span>
                     </button>
                     <input type="file" id="fileInput" accept=".json,.txt,.csv" class="hidden" onchange="handleFileImport(event)">
                 </div>
@@ -84,66 +92,56 @@
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         
-        <!-- Cloud Setup Modal (Hidden by default) -->
-        <div id="cloudSetupModal" class="hidden fixed inset-0 bg-black/50 z-50 flex items-center justify-center">
-            <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">配置云端同步</h3>
-                <p class="text-sm text-gray-600 mb-4">使用 LeanCloud（国内）实现数据云端备份，换设备不丢失。</p>
-                <div class="space-y-3">
-                    <input type="text" id="lcAppId" placeholder="LeanCloud App ID" class="w-full px-3 py-2 border rounded-lg text-sm">
-                    <input type="text" id="lcAppKey" placeholder="LeanCloud App Key" class="w-full px-3 py-2 border rounded-lg text-sm">
-                    <input type="text" id="lcServer" placeholder="API 域名 (如 https://xxx.api.lncld.net)" class="w-full px-3 py-2 border rounded-lg text-sm">
-                </div>
-                <div class="mt-4 flex space-x-2">
-                    <button onclick="saveCloudConfig()" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700">启用同步</button>
-                    <button onclick="closeCloudModal()" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300">取消</button>
-                </div>
-                <p class="text-xs text-gray-500 mt-3">* 注册 LeanCloud 国际版获取以上信息，免费额度足够个人使用</p>
-            </div>
-        </div>
-
         <!-- Stats Overview -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8 fade-in">
-            <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-blue-500">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 fade-in">
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4" id="stat-card-1">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">本年度电费</p>
+                        <p class="text-sm font-medium text-gray-600" id="stat-label-1">本年度费用</p>
                         <p class="text-2xl font-bold text-gray-900 mt-1" id="currentYearCost">¥0.00</p>
                     </div>
-                    <div class="p-2 bg-blue-100 rounded-lg"><i class="fas fa-yen-sign text-blue-600"></i></div>
+                    <div class="p-2 rounded-lg bg-opacity-20" id="stat-icon-1">
+                        <i class="fas fa-yen-sign text-xl"></i>
+                    </div>
                 </div>
                 <p class="text-xs text-gray-500 mt-2" id="currentYearCompare">较去年 --</p>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-green-500">
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4" id="stat-card-2">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">本年度用电</p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1" id="currentYearKwh">0 度</p>
+                        <p class="text-sm font-medium text-gray-600" id="stat-label-2">本年度用量</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1" id="currentYearUsage">0</p>
                     </div>
-                    <div class="p-2 bg-green-100 rounded-lg"><i class="fas fa-plug text-green-600"></i></div>
+                    <div class="p-2 rounded-lg bg-opacity-20" id="stat-icon-2">
+                        <i class="fas fa-tachometer-alt text-xl"></i>
+                    </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-2" id="currentYearKwhCompare">较去年 --</p>
+                <p class="text-xs text-gray-500 mt-2" id="currentYearUsageCompare">较去年 --</p>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-purple-500">
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-purple-500">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-600">当前阶梯</p>
                         <p class="text-2xl font-bold text-gray-900 mt-1" id="currentTier">--</p>
                     </div>
-                    <div class="p-2 bg-purple-100 rounded-lg"><i class="fas fa-layer-group text-purple-600"></i></div>
+                    <div class="p-2 bg-purple-100 rounded-lg text-purple-600">
+                        <i class="fas fa-layer-group text-xl"></i>
+                    </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-2" id="currentTierInfo">本年累计 0 度</p>
+                <p class="text-xs text-gray-500 mt-2" id="currentTierInfo">本年累计 0</p>
             </div>
 
-            <div class="bg-white rounded-xl shadow-sm p-6 border-l-4 border-orange-500">
+            <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-orange-500">
                 <div class="flex justify-between items-start">
                     <div>
                         <p class="text-sm font-medium text-gray-600">记录总数</p>
                         <p class="text-2xl font-bold text-gray-900 mt-1" id="totalRecords">0</p>
                     </div>
-                    <div class="p-2 bg-orange-100 rounded-lg"><i class="fas fa-database text-orange-600"></i></div>
+                    <div class="p-2 bg-orange-100 rounded-lg text-orange-600">
+                        <i class="fas fa-database text-xl"></i>
+                    </div>
                 </div>
                 <p class="text-xs text-gray-500 mt-2">历史累计</p>
             </div>
@@ -155,63 +153,32 @@
             <div class="lg:col-span-1 space-y-6">
                 
                 <!-- Tier Settings -->
-                <div class="bg-white rounded-xl shadow-sm p-6 fade-in border-2 border-indigo-50">
+                <div class="bg-white rounded-xl shadow-sm p-6 fade-in border-2 border-gray-100">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-sliders-h text-indigo-600 mr-2"></i>
-                        阶梯电价设置
+                        <i class="fas fa-sliders-h mr-2" id="tier-settings-icon"></i>
+                        <span id="tier-settings-title">阶梯计价设置</span>
                     </h3>
-                    <div class="space-y-3">
-                        <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                                <span class="text-sm font-medium text-green-800">第一阶梯</span>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span class="text-xs text-green-600">0 -</span>
-                                <input type="number" id="tier1Limit" value="260" class="w-16 px-2 py-1 text-sm border border-green-300 rounded text-center focus:ring-2 focus:ring-green-500" onchange="updateTierSettings()">
-                                <span class="text-xs text-green-600">度</span>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
-                                <span class="text-sm font-medium text-yellow-800">第二阶梯</span>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span id="tier2Start" class="text-xs text-yellow-600">261 -</span>
-                                <input type="number" id="tier2Limit" value="600" class="w-16 px-2 py-1 text-sm border border-yellow-300 rounded text-center focus:ring-2 focus:ring-yellow-500" onchange="updateTierSettings()">
-                                <span class="text-xs text-yellow-600">度</span>
-                            </div>
-                        </div>
-                        
-                        <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                            <div class="flex items-center">
-                                <div class="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-                                <span class="text-sm font-medium text-red-800">第三阶梯</span>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span id="tier3Start" class="text-xs text-red-600">601 度以上</span>
-                            </div>
-                        </div>
+                    <div class="space-y-3" id="tier-settings-container">
+                        <!-- Dynamically populated based on type -->
                     </div>
+                    <p class="text-xs text-gray-500 mt-3">* 设置仅对当前类型生效</p>
                 </div>
 
                 <!-- Batch OCR -->
-                <div class="bg-white rounded-xl shadow-sm p-6 fade-in border-2 border-indigo-100">
+                <div class="bg-white rounded-xl shadow-sm p-6 fade-in border-2 border-gray-100">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-images text-indigo-600 mr-2"></i>
-                        批量AI识别
+                        <i class="fas fa-camera mr-2 text-gray-600"></i>
+                        AI 识别导入
                     </h3>
                     
-                    <div id="batchDropZone" class="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-indigo-500 transition-all duration-300 cursor-pointer bg-gray-50 relative overflow-hidden group">
+                    <div id="batchDropZone" class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-gray-500 transition-all duration-300 cursor-pointer bg-gray-50 relative overflow-hidden group">
                         <input type="file" id="batchImageInput" accept="image/*" class="hidden" multiple onchange="handleBatchUpload(event)">
-                        <div id="uploadPrompt" class="transition-all duration-300">
-                            <i class="fas fa-cloud-upload-alt text-5xl text-gray-400 group-hover:text-indigo-500 transition-colors mb-4"></i>
-                            <p class="text-base font-medium text-gray-700 mb-1">拖拽多张账单图片到此处</p>
-                            <p class="text-sm text-gray-500">支持批量处理，自动识别电费信息</p>
+                        <div id="uploadPrompt">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 group-hover:text-gray-600 transition-colors mb-3"></i>
+                            <p class="text-sm font-medium text-gray-700">拖拽账单截图到此处</p>
+                            <p class="text-xs text-gray-500 mt-1">支持支付宝/微信账单</p>
                         </div>
-                        <div id="scanningEffect" class="hidden absolute inset-0 bg-indigo-900/5 pointer-events-none">
+                        <div id="scanningEffect" class="hidden absolute inset-0 bg-gray-900/5 pointer-events-none">
                             <div class="scan-line"></div>
                         </div>
                     </div>
@@ -219,66 +186,36 @@
                     <div id="batchProgress" class="hidden mt-4 bg-gray-50 rounded-lg p-3">
                         <div class="flex justify-between items-center mb-2">
                             <span class="text-sm font-medium text-gray-700" id="batchStatus">准备识别...</span>
-                            <span class="text-sm font-bold text-indigo-600" id="batchPercent">0%</span>
+                            <span class="text-sm font-bold text-gray-600" id="batchPercent">0%</span>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                            <div id="batchProgressBar" class="bg-indigo-600 h-2.5 rounded-full transition-all duration-500 ease-out" style="width: 0%"></div>
-                        </div>
-                    </div>
-
-                    <div id="batchImagePreview" class="mt-4 hidden">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-sm font-medium text-gray-700">待处理图片 (<span id="imageCount">0</span>)</span>
-                            <button onclick="clearBatch()" class="text-xs text-red-500 hover:text-red-700 font-medium">
-                                <i class="fas fa-trash-alt mr-1"></i>清空
-                            </button>
-                        </div>
-                        <div class="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto p-1" id="previewGrid"></div>
-                    </div>
-                </div>
-
-                <!-- OCR Results -->
-                <div id="ocrResultsPanel" class="bg-white rounded-xl shadow-sm p-6 fade-in hidden">
-                    <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                        <h3 class="text-lg font-semibold text-gray-800">识别结果</h3>
-                        <div class="flex space-x-2">
-                            <button onclick="selectAllResults(true)" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200">全选</button>
-                            <button onclick="selectAllResults(false)" class="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200">全不选</button>
+                        <div class="w-full bg-gray-200 rounded-full h-2">
+                            <div id="batchProgressBar" class="bg-gray-600 h-2 rounded-full transition-all" style="width: 0%"></div>
                         </div>
                     </div>
-                    
-                    <div class="mb-3 flex justify-between items-center text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                        <span>已识别 <b id="recognizedCount" class="text-indigo-600">0</b> 条</span>
-                        <button onclick="importSelected()" class="bg-green-600 text-white px-4 py-1.5 rounded-lg hover:bg-green-700 transition font-medium shadow-sm">
-                            导入选中 (<span id="selectedCount">0</span>)
-                        </button>
-                    </div>
-
-                    <div class="overflow-y-auto max-h-80 space-y-2 pr-1" id="ocrResultsList"></div>
                 </div>
 
                 <!-- Manual Entry -->
                 <div class="bg-white rounded-xl shadow-sm p-6 fade-in">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-plus-circle text-indigo-600 mr-2"></i>
+                        <i class="fas fa-plus-circle mr-2 text-gray-600"></i>
                         手动添加
                     </h3>
                     <form id="entryForm" class="space-y-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-1">日期</label>
-                            <input type="month" id="entryDate" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                            <input type="month" id="entryDate" required class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition">
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">用电量 (度)</label>
-                                <input type="number" id="entryKwh" step="0.01" required placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                                <label class="block text-sm font-medium text-gray-700 mb-1" id="usageLabel">用量</label>
+                                <input type="number" id="entryUsage" step="0.01" required placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">电费金额 (¥)</label>
-                                <input type="number" id="entryCost" step="0.01" required placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition">
+                                <label class="block text-sm font-medium text-gray-700 mb-1">费用金额 (¥)</label>
+                                <input type="number" id="entryCost" step="0.01" required placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition">
                             </div>
                         </div>
-                        <button type="submit" class="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition font-medium shadow-md hover:shadow-lg transform hover:-translate-y-0.5">
+                        <button type="submit" class="w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition font-medium shadow-md">
                             保存记录
                         </button>
                     </form>
@@ -297,76 +234,61 @@
                 <!-- View Switcher -->
                 <div class="bg-white rounded-xl shadow-sm p-2 fade-in">
                     <div class="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-                        <button onclick="switchView('comparison')" id="viewComparison" class="view-btn active flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 bg-white text-gray-800 shadow-sm">
+                        <button onclick="switchView('comparison')" id="viewComparison" class="view-btn active flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center space-x-2 bg-white text-gray-800 shadow-sm">
                             <i class="fas fa-chart-line"></i>
-                            <span>月度对比分析</span>
+                            <span>月度对比</span>
                         </button>
-                        <button onclick="switchView('tier')" id="viewTier" class="view-btn flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 text-gray-600 hover:bg-white/50">
+                        <button onclick="switchView('tier')" id="viewTier" class="view-btn flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center space-x-2 text-gray-600 hover:bg-white/50">
                             <i class="fas fa-layer-group"></i>
-                            <span>阶梯累计分析</span>
+                            <span>阶梯分析</span>
                         </button>
                     </div>
                 </div>
 
                 <!-- Chart Card -->
                 <div class="bg-white rounded-xl shadow-sm p-6 fade-in">
-                    
-                    <!-- Comparison View Controls -->
                     <div id="comparisonControls" class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                         <div>
-                            <h3 class="text-lg font-semibold text-gray-800">年度用电对比</h3>
-                            <p class="text-sm text-gray-500 mt-1">横轴：月份 | 纵轴：当月用量 | 每年一条线</p>
+                            <h3 class="text-lg font-semibold text-gray-800" id="chartTitle">年度对比分析</h3>
+                            <p class="text-sm text-gray-500 mt-1">横轴：月份 | 纵轴：用量/费用</p>
                         </div>
                         <div class="flex bg-gray-100 rounded-lg p-1">
-                            <button onclick="switchMetric('kwh')" id="btnKwh" class="metric-btn active px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 bg-indigo-600 text-white shadow-md">
-                                <i class="fas fa-bolt"></i>
-                                <span>用电量</span>
+                            <button onclick="switchMetric('usage')" id="btnUsage" class="metric-btn active px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 bg-gray-800 text-white shadow-md">
+                                <i class="fas fa-tachometer-alt"></i>
+                                <span id="metricLabelUsage">用量</span>
                             </button>
-                            <button onclick="switchMetric('cost')" id="btnCost" class="metric-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 text-gray-600 hover:bg-gray-200">
+                            <button onclick="switchMetric('cost')" id="btnCost" class="metric-btn px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 text-gray-600 hover:bg-gray-200">
                                 <i class="fas fa-yen-sign"></i>
-                                <span>电费</span>
+                                <span>费用</span>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Tier View Controls -->
                     <div id="tierControls" class="hidden flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                         <div>
                             <h3 class="text-lg font-semibold text-gray-800">阶梯累计分析</h3>
-                            <p class="text-sm text-gray-500 mt-1">横轴：月份 | 纵轴：累计用量 | 判断阶梯突破点</p>
+                            <p class="text-sm text-gray-500 mt-1">横轴：月份 | 纵轴：累计用量</p>
                         </div>
-                        <select id="tierYearSelect" onchange="changeTierYear(this.value)" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"></select>
+                        <select id="tierYearSelect" onchange="changeTierYear(this.value)" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select>
                     </div>
 
-                    <!-- Year Toggles -->
                     <div id="yearToggles" class="mb-4 flex flex-wrap gap-2"></div>
 
-                    <!-- Chart -->
                     <div class="chart-container relative">
                         <canvas id="mainChart"></canvas>
                     </div>
 
-                    <!-- Tier Legend -->
                     <div id="tierLegend" class="hidden mt-4 flex flex-wrap gap-4 justify-center text-sm">
-                        <div class="flex items-center">
-                            <div class="w-4 h-4 bg-green-200 border border-green-400 rounded mr-2"></div>
-                            <span class="text-gray-600">第一阶梯 (0-<span id="legendTier1">260</span>度)</span>
-                        </div>
-                        <div class="flex items-center">
-                            <div class="w-4 h-4 bg-yellow-200 border border-yellow-400 rounded mr-2"></div>
-                            <span class="text-gray-600">第二阶梯 (<span id="legendTier2Start">261</span>-<span id="legendTier2">600</span>度)</span>
-                        </div>
-                        <div class="flex items-center">
-                            <div class="w-4 h-4 bg-red-200 border border-red-400 rounded mr-2"></div>
-                            <span class="text-gray-600">第三阶梯 (<span id="legendTier3Start">601</span>度+)</span>
-                        </div>
+                        <div class="flex items-center"><div class="w-4 h-4 bg-green-200 border border-green-400 rounded mr-2"></div><span class="text-gray-600">第一阶梯</span></div>
+                        <div class="flex items-center"><div class="w-4 h-4 bg-yellow-200 border border-yellow-400 rounded mr-2"></div><span class="text-gray-600">第二阶梯</span></div>
+                        <div class="flex items-center"><div class="w-4 h-4 bg-red-200 border border-red-400 rounded mr-2"></div><span class="text-gray-600">第三阶梯</span></div>
                     </div>
                 </div>
 
                 <!-- Tier Table -->
                 <div id="tierTableCard" class="hidden bg-white rounded-xl shadow-sm p-6 fade-in">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-                        <i class="fas fa-table text-indigo-600 mr-2"></i>
+                        <i class="fas fa-table mr-2 text-gray-600"></i>
                         阶梯突破明细
                     </h3>
                     <div class="overflow-x-auto">
@@ -376,9 +298,9 @@
                                     <th class="px-4 py-3 rounded-tl-lg">年份</th>
                                     <th class="px-4 py-3">进入二阶月份</th>
                                     <th class="px-4 py-3">进入三阶月份</th>
-                                    <th class="px-4 py-3">一阶电量</th>
-                                    <th class="px-4 py-3">二阶电量</th>
-                                    <th class="px-4 py-3 rounded-tr-lg">三阶电量</th>
+                                    <th class="px-4 py-3">一阶用量</th>
+                                    <th class="px-4 py-3">二阶用量</th>
+                                    <th class="px-4 py-3 rounded-tr-lg">三阶用量</th>
                                 </tr>
                             </thead>
                             <tbody id="tierTableBody"></tbody>
@@ -390,15 +312,15 @@
                 <div id="comparisonAnalysis" class="grid grid-cols-1 md:grid-cols-2 gap-6 fade-in">
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-                            <i class="fas fa-snowflake text-blue-500 mr-2"></i>
-                            用电高峰月 (历史平均)
+                            <i class="fas fa-arrow-up text-red-500 mr-2"></i>
+                            用量高峰月 (历史平均)
                         </h4>
                         <div id="peakMonths" class="space-y-2"></div>
                     </div>
                     <div class="bg-white rounded-xl shadow-sm p-6">
                         <h4 class="font-semibold text-gray-800 mb-3 flex items-center">
-                            <i class="fas fa-leaf text-green-500 mr-2"></i>
-                            用电低谷月 (历史平均)
+                            <i class="fas fa-arrow-down text-green-500 mr-2"></i>
+                            用量低谷月 (历史平均)
                         </h4>
                         <div id="lowMonths" class="space-y-2"></div>
                     </div>
@@ -414,374 +336,281 @@
     </div>
 
     <script>
-        // Global Variables
-        let electricityData = JSON.parse(localStorage.getItem('electricityData')) || [];
-        let currentChart = null;
+        // Configuration
+        const TYPE_CONFIG = {
+            electricity: {
+                name: '电费',
+                icon: 'bolt',
+                unit: '度',
+                color: 'indigo',
+                gradient: 'from-indigo-500 to-purple-600',
+                tierDefaults: { tier1: 260, tier2: 600 }
+            },
+            water: {
+                name: '水费',
+                icon: 'tint',
+                unit: '吨',
+                color: 'blue',
+                gradient: 'from-blue-500 to-cyan-600',
+                tierDefaults: { tier1: 180, tier2: 260 } // 常见水费阶梯
+            },
+            gas: {
+                name: '燃气',
+                icon: 'fire',
+                unit: '立方米',
+                color: 'orange',
+                gradient: 'from-orange-500 to-red-600',
+                tierDefaults: { tier1: 300, tier2: 600 } // 常见燃气阶梯
+            }
+        };
+
+        // State
+        let currentType = 'electricity';
         let currentView = 'comparison';
-        let currentMetric = 'kwh';
+        let currentMetric = 'usage';
+        let currentChart = null;
         let visibleYears = new Set();
         let selectedTierYear = new Date().getFullYear().toString();
-        let batchFiles = [];
-        let ocrResults = [];
-        let isProcessing = false;
-        let tierSettings = { tier1: 260, tier2: 600 };
-        let useCloud = false;
-        let cloudConfig = null;
 
-        // 配置：是否从本地 JSON 文件加载数据
-        const USE_LOCAL_JSON = true;
-        const DATA_URL = './data/bills.json';
-        const SETTINGS_URL = './data/settings.json';
+        // Data Structure
+        let allData = {
+            electricity: [],
+            water: [],
+            gas: []
+        };
+
+        let tierSettings = {
+            electricity: { tier1: 260, tier2: 600 },
+            water: { tier1: 180, tier2: 260 },
+            gas: { tier1: 300, tier2: 600 }
+        };
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', async () => {
-            // 首先尝试从本地 JSON 文件加载数据
-            if (USE_LOCAL_JSON) {
-                await initLocalData();
-            } else {
-                // 回退到 LocalStorage
-                loadTierSettings();
-                loadCloudConfig();
-            }
-
-            renderRecentList();
-            updateStats();
-            updateComparisonView();
-            setupBatchDragAndDrop();
-
-            const now = new Date();
-            document.getElementById('entryDate').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-
-            // Try to sync from cloud on load
-            if (useCloud && cloudConfig) {
-                initLeanCloud();
-                syncFromCloud();
-            }
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            loadTierSettings();
+            updateUI();
+            setupEventListeners();
         });
 
-        // 初始化时加载本地数据
-        async function initLocalData() {
-            if (!USE_LOCAL_JSON) return;
-
-            try {
-                // 加载账单数据
-                const billsResponse = await fetch(DATA_URL + '?t=' + Date.now()); // 加时间戳防止缓存
-                if (billsResponse.ok) {
-                    const bills = await billsResponse.json();
-                    if (Array.isArray(bills) && bills.length > 0) {
-                        electricityData = bills;
-                        console.log('已从本地文件加载', bills.length, '条记录');
-                    }
-                }
-
-                // 加载阶梯设置
-                const settingsResponse = await fetch(SETTINGS_URL + '?t=' + Date.now());
-                if (settingsResponse.ok) {
-                    const settings = await settingsResponse.json();
-                    if (settings.tier1 && settings.tier2) {
-                        tierSettings = {
-                            tier1: parseInt(settings.tier1),
-                            tier2: parseInt(settings.tier2)
-                        };
-                        // 更新输入框
-                        document.getElementById('tier1Limit').value = tierSettings.tier1;
-                        document.getElementById('tier2Limit').value = tierSettings.tier2;
-                        updateTierLabels();
-                        console.log('已从本地文件加载阶梯设置');
-                    }
-                }
-
-                // 更新界面
-                renderRecentList();
-                updateStats();
-                updateComparisonView();
-
-            } catch (error) {
-                console.error('加载本地数据失败:', error);
-                // 失败时回退到 LocalStorage
-                const saved = localStorage.getItem('electricityData');
-                if (saved) electricityData = JSON.parse(saved);
-                loadTierSettings();
-            }
-        }
-
-        // 保存时生成下载（因为无法直接写入文件）
-        function downloadDataForCommit() {
-            // 下载账单数据
-            const billsDataStr = JSON.stringify(electricityData, null, 2);
-            const billsBlob = new Blob([billsDataStr], { type: 'application/json' });
-            const billsUrl = URL.createObjectURL(billsBlob);
-            const billsLink = document.createElement('a');
-            billsLink.href = billsUrl;
-            billsLink.download = 'bills.json';
-            billsLink.click();
-
-            // 下载设置
-            const settingsDataStr = JSON.stringify({
-                tier1: tierSettings.tier1,
-                tier2: tierSettings.tier2,
-                lastUpdated: new Date().toISOString().split('T')[0]
-            }, null, 2);
-            const settingsBlob = new Blob([settingsDataStr], { type: 'application/json' });
-            const settingsUrl = URL.createObjectURL(settingsBlob);
-            const settingsLink = document.createElement('a');
-            settingsLink.href = settingsUrl;
-            settingsLink.download = 'settings.json';
-            settingsLink.click();
-
-            showToast('已下载 data/bills.json 和 data/settings.json，请放入项目目录后提交');
-        }
-
-        // Cloud Sync Functions
-        function toggleCloudSync() {
-            if (!useCloud) {
-                document.getElementById('cloudSetupModal').classList.remove('hidden');
-            } else {
-                // Turn off cloud
-                useCloud = false;
-                localStorage.removeItem('cloudConfig');
-                updateCloudStatus();
-                showToast('已切换到本地模式');
-            }
-        }
-
-        function closeCloudModal() {
-            document.getElementById('cloudSetupModal').classList.add('hidden');
-        }
-
-        function saveCloudConfig() {
-            const appId = document.getElementById('lcAppId').value.trim();
-            const appKey = document.getElementById('lcAppKey').value.trim();
-            const serverURL = document.getElementById('lcServer').value.trim();
-            
-            if (!appId || !appKey) {
-                showToast('请填写完整的 App ID 和 App Key');
-                return;
-            }
-            
-            cloudConfig = { appId, appKey, serverURL };
-            localStorage.setItem('cloudConfig', JSON.stringify(cloudConfig));
-            useCloud = true;
-            closeCloudModal();
-            initLeanCloud();
-            syncFromCloud();
-            updateCloudStatus();
-            showToast('云端同步已启用');
-        }
-
-        function loadCloudConfig() {
-            const saved = localStorage.getItem('cloudConfig');
+        function loadData() {
+            const saved = localStorage.getItem('utilityData');
             if (saved) {
-                cloudConfig = JSON.parse(saved);
-                useCloud = true;
-                updateCloudStatus();
+                const parsed = JSON.parse(saved);
+                allData = { ...allData, ...parsed.data };
+                tierSettings = { ...tierSettings, ...parsed.tierSettings };
             }
+            updateBadges();
         }
 
-        function initLeanCloud() {
-            if (!cloudConfig) return;
-            try {
-                AV.init({
-                    appId: cloudConfig.appId,
-                    appKey: cloudConfig.appKey,
-                    serverURL: cloudConfig.serverURL || undefined
-                });
-            } catch(e) {
-                console.error('LeanCloud init failed:', e);
-            }
+        function saveData() {
+            localStorage.setItem('utilityData', JSON.stringify({
+                data: allData,
+                tierSettings: tierSettings,
+                lastUpdate: new Date().toISOString()
+            }));
+            updateBadges();
         }
 
-        function updateCloudStatus() {
-            const btn = document.getElementById('cloudStatus');
-            const icon = document.getElementById('cloudSyncBtn').querySelector('i');
-            if (useCloud) {
-                btn.textContent = '云端同步中';
-                icon.className = 'fas fa-cloud-upload-alt';
-                document.getElementById('cloudSyncBtn').classList.add('bg-green-500/20');
-            } else {
-                btn.textContent = '本地模式';
-                icon.className = 'fas fa-cloud';
-                document.getElementById('cloudSyncBtn').classList.remove('bg-green-500/20');
-            }
+        function loadTierSettings() {
+            // Already loaded in loadData
         }
 
-        function showSyncStatus(status, msg) {
-            const el = document.getElementById('syncStatus');
-            el.className = `sync-status show ${status}`;
-            el.innerHTML = `<i class="fas ${status === 'syncing' ? 'fa-circle-notch fa-spin' : status === 'success' ? 'fa-check' : 'fa-exclamation-triangle'} mr-2"></i><span>${msg}</span>`;
-            setTimeout(() => el.classList.remove('show'), 3000);
-        }
-
-        async function syncToCloud() {
-            if (!useCloud || !cloudConfig) return;
-            showSyncStatus('syncing', '正在同步到云端...');
-            
-            try {
-                const Bills = AV.Object.extend('ElectricityBills');
-                const query = new AV.Query(Bills);
-                query.equalTo('userId', getUserId());
-                const existing = await query.find();
-                
-                // Delete old records
-                if (existing.length > 0) {
-                    await AV.Object.destroyAll(existing);
+        function updateBadges() {
+            ['electricity', 'water', 'gas'].forEach(type => {
+                const count = allData[type].length;
+                const badge = document.getElementById(`badge-${type}`);
+                if (count > 0) {
+                    badge.textContent = count;
+                    badge.classList.remove('hidden');
                 }
-                
-                // Save new records
-                const objects = electricityData.map(record => {
-                    const bill = new Bills();
-                    bill.set('userId', getUserId());
-                    bill.set('date', record.date);
-                    bill.set('kwh', record.kwh);
-                    bill.set('cost', record.cost);
-                    return bill;
-                });
-                
-                if (objects.length > 0) {
-                    await AV.Object.saveAll(objects);
-                }
-                showSyncStatus('success', '同步成功');
-            } catch (error) {
-                console.error('Sync error:', error);
-                showSyncStatus('error', '同步失败');
-            }
+            });
         }
 
-        async function syncFromCloud() {
-            if (!useCloud || !cloudConfig) return;
-            showSyncStatus('syncing', '正在从云端恢复...');
+        // Type Switching
+        function switchType(type) {
+            currentType = type;
             
-            try {
-                const Bills = AV.Object.extend('ElectricityBills');
-                const query = new AV.Query(Bills);
-                query.equalTo('userId', getUserId());
-                query.ascending('date');
-                const results = await query.find();
+            // Update tabs
+            ['electricity', 'water', 'gas'].forEach(t => {
+                const tab = document.getElementById(`tab-${t}`);
+                const config = TYPE_CONFIG[t];
                 
-                if (results.length > 0) {
-                    electricityData = results.map(obj => ({
-                        date: obj.get('date'),
-                        kwh: obj.get('kwh'),
-                        cost: obj.get('cost'),
-                        timestamp: obj.createdAt
-                    }));
-                    saveToLocal();
-                    renderRecentList();
-                    updateStats();
-                    if (currentView === 'comparison') updateComparisonView();
-                    else updateTierView();
-                    showSyncStatus('success', `已恢复 ${results.length} 条记录`);
+                if (t === type) {
+                    tab.className = `type-tab active flex-1 bg-gradient-to-r ${config.gradient} text-white py-3 px-4 rounded-xl font-semibold flex items-center justify-center space-x-2 shadow-md cursor-pointer`;
                 } else {
-                    showSyncStatus('success', '云端暂无数据');
+                    tab.className = `type-tab flex-1 bg-gray-100 text-gray-600 py-3 px-4 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:bg-${config.color}-50 hover:text-${config.color}-600 cursor-pointer`;
                 }
-            } catch (error) {
-                console.error('Sync from cloud error:', error);
-                showSyncStatus('error', '恢复失败');
-            }
+            });
+
+            // Update nav color
+            const nav = document.querySelector('nav');
+            nav.className = nav.className.replace(/(gradient-bg|water-gradient|gas-gradient)/, '');
+            if (type === 'water') nav.classList.add('water-gradient');
+            else if (type === 'gas') nav.classList.add('gas-gradient');
+            else nav.classList.add('gradient-bg');
+
+            updateUI();
         }
 
-        function getUserId() {
-            let id = localStorage.getItem('userId');
-            if (!id) {
-                id = 'user_' + Math.random().toString(36).substr(2, 9);
-                localStorage.setItem('userId', id);
-            }
-            return id;
+        function updateUI() {
+            const config = TYPE_CONFIG[currentType];
+            
+            // Update labels
+            document.getElementById('stat-label-1').textContent = `本年度${config.name}`;
+            document.getElementById('stat-label-2').textContent = `本年度用量`;
+            document.getElementById('usageLabel').textContent = `用量 (${config.unit})`;
+            document.getElementById('metricLabelUsage').textContent = `用量 (${config.unit})`;
+            document.getElementById('chartTitle').textContent = `${config.name}年度对比`;
+            
+            // Update tier settings UI
+            updateTierSettingsUI();
+            
+            // Update stats colors
+            updateStatColors(config.color);
+            
+            // Refresh displays
+            renderRecentList();
+            updateStats();
+            
+            if (currentView === 'comparison') updateComparisonView();
+            else updateTierView();
+        }
+
+        function updateStatColors(color) {
+            const colors = {
+                indigo: 'border-indigo-500 text-indigo-600 bg-indigo-100',
+                blue: 'border-blue-500 text-blue-600 bg-blue-100',
+                orange: 'border-orange-500 text-orange-600 bg-orange-100'
+            };
+            const theme = colors[color] || colors.indigo;
+            
+            document.getElementById('stat-card-1').className = `bg-white rounded-xl shadow-sm p-5 border-l-4 ${theme.split(' ')[0]}`;
+            document.getElementById('stat-card-2').className = `bg-white rounded-xl shadow-sm p-5 border-l-4 ${theme.split(' ')[0]}`;
+        }
+
+        function updateTierSettingsUI() {
+            const container = document.getElementById('tier-settings-container');
+            const settings = tierSettings[currentType];
+            const config = TYPE_CONFIG[currentType];
+            
+            container.innerHTML = `
+                <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                        <span class="text-sm font-medium text-green-800">第一阶梯</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-green-600">0 -</span>
+                        <input type="number" value="${settings.tier1}" onchange="updateTierSettings(${settings.tier2}, this.value)" class="w-16 px-2 py-1 text-sm border border-green-300 rounded text-center">
+                        <span class="text-xs text-green-600">${config.unit}</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
+                        <span class="text-sm font-medium text-yellow-800">第二阶梯</span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xs text-yellow-600">${parseInt(settings.tier1) + 1} -</span>
+                        <input type="number" value="${settings.tier2}" onchange="updateTierSettings(this.value, ${settings.tier1})" class="w-16 px-2 py-1 text-sm border border-yellow-300 rounded text-center">
+                        <span class="text-xs text-yellow-600">${config.unit}</span>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div class="flex items-center">
+                        <div class="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                        <span class="text-sm font-medium text-red-800">第三阶梯</span>
+                    </div>
+                    <span class="text-xs text-red-600">${parseInt(settings.tier2) + 1} ${config.unit}以上</span>
+                </div>
+            `;
+        }
+
+        function updateTierSettings(tier2, tier1) {
+            tierSettings[currentType] = {
+                tier1: parseInt(tier1) || 0,
+                tier2: parseInt(tier2) || 0
+            };
+            saveData();
+            updateTierSettingsUI();
+            updateCurrentTierDisplay();
+            if (currentView === 'tier') updateTierView();
+            showToast('阶梯设置已更新');
         }
 
         // Data Management
-        function saveToLocal() {
-            localStorage.setItem('electricityData', JSON.stringify(electricityData));
-        }
-
-        function addRecord(date, kwh, cost) {
-            const existingIndex = electricityData.findIndex(r => r.date === date);
-            const record = { date, kwh, cost, timestamp: new Date().toISOString() };
-
-            if (existingIndex >= 0) electricityData[existingIndex] = record;
-            else electricityData.push(record);
-
-            electricityData.sort((a, b) => a.date.localeCompare(b.date));
-            saveToLocal();
-
-            // Sync to cloud if enabled
-            if (useCloud) {
-                syncToCloud();
+        function addRecord(date, usage, cost) {
+            const existingIndex = allData[currentType].findIndex(r => r.date === date);
+            const record = { date, usage: parseFloat(usage), cost: parseFloat(cost), timestamp: new Date().toISOString() };
+            
+            if (existingIndex >= 0) {
+                allData[currentType][existingIndex] = record;
+            } else {
+                allData[currentType].push(record);
             }
-
-            // 如果使用本地 JSON 模式，提示用户下载更新
-            if (USE_LOCAL_JSON) {
-                setTimeout(() => {
-                    if (confirm('数据已更新到浏览器！是否下载 JSON 文件以更新项目目录？\n（下载后请放入 data/ 文件夹并 git push）')) {
-                        downloadDataForCommit();
-                    }
-                }, 500);
-            }
-
+            
+            allData[currentType].sort((a, b) => a.date.localeCompare(b.date));
+            saveData();
             renderRecentList();
             updateStats();
             updateCurrentTierDisplay();
-
+            
             if (currentView === 'comparison') updateComparisonView();
             else updateTierView();
         }
 
         function deleteRecord(date) {
-            electricityData = electricityData.filter(r => r.date !== date);
-            saveToLocal();
-            if (useCloud) syncToCloud();
-
-            // 如果使用本地 JSON 模式，提示用户下载更新
-            if (USE_LOCAL_JSON) {
-                setTimeout(() => {
-                    if (confirm('数据已从浏览器删除！是否下载 JSON 文件以更新项目目录？\n（下载后请放入 data/ 文件夹并 git push）')) {
-                        downloadDataForCommit();
-                    }
-                }, 500);
-            }
-
+            allData[currentType] = allData[currentType].filter(r => r.date !== date);
+            saveData();
             renderRecentList();
             updateStats();
             updateCurrentTierDisplay();
-
+            
             if (currentView === 'comparison') updateComparisonView();
             else updateTierView();
-
             showToast('删除成功');
         }
 
         // View Functions
         function switchView(view) {
             currentView = view;
-            const compBtn = document.getElementById('viewComparison');
-            const tierBtn = document.getElementById('viewTier');
+            document.getElementById('viewComparison').className = view === 'comparison' ? 'view-btn active flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center space-x-2 bg-white text-gray-800 shadow-sm' : 'view-btn flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center space-x-2 text-gray-600 hover:bg-white/50';
+            document.getElementById('viewTier').className = view === 'tier' ? 'view-btn active flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center space-x-2 bg-white text-gray-800 shadow-sm' : 'view-btn flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center space-x-2 text-gray-600 hover:bg-white/50';
             
-            if (view === 'comparison') {
-                compBtn.className = 'view-btn active flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 bg-white text-gray-800 shadow-sm';
-                tierBtn.className = 'view-btn flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 text-gray-600 hover:bg-white/50';
-                document.getElementById('comparisonControls').classList.remove('hidden');
-                document.getElementById('tierControls').classList.add('hidden');
-                document.getElementById('yearToggles').classList.remove('hidden');
-                document.getElementById('tierLegend').classList.add('hidden');
-                document.getElementById('tierTableCard').classList.add('hidden');
-                document.getElementById('comparisonAnalysis').classList.remove('hidden');
-                updateComparisonView();
+            document.getElementById('comparisonControls').classList.toggle('hidden', view !== 'comparison');
+            document.getElementById('tierControls').classList.toggle('hidden', view !== 'tier');
+            document.getElementById('yearToggles').classList.toggle('hidden', view !== 'comparison');
+            document.getElementById('tierLegend').classList.toggle('hidden', view !== 'tier');
+            document.getElementById('tierTableCard').classList.toggle('hidden', view !== 'tier');
+            document.getElementById('comparisonAnalysis').classList.toggle('hidden', view !== 'comparison');
+            
+            if (view === 'comparison') updateComparisonView();
+            else updateTierView();
+        }
+
+        function switchMetric(metric) {
+            currentMetric = metric;
+            const btnUsage = document.getElementById('btnUsage');
+            const btnCost = document.getElementById('btnCost');
+            const config = TYPE_CONFIG[currentType];
+            
+            if (metric === 'usage') {
+                btnUsage.className = `metric-btn active px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 bg-${config.color}-600 text-white shadow-md`;
+                btnCost.className = 'metric-btn px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 text-gray-600 hover:bg-gray-200';
             } else {
-                tierBtn.className = 'view-btn active flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 bg-white text-gray-800 shadow-sm';
-                compBtn.className = 'view-btn flex-1 px-4 py-2.5 rounded-md text-sm font-medium transition-all duration-200 flex items-center justify-center space-x-2 text-gray-600 hover:bg-white/50';
-                document.getElementById('comparisonControls').classList.add('hidden');
-                document.getElementById('tierControls').classList.remove('hidden');
-                document.getElementById('yearToggles').classList.add('hidden');
-                document.getElementById('tierLegend').classList.remove('hidden');
-                document.getElementById('tierTableCard').classList.remove('hidden');
-                document.getElementById('comparisonAnalysis').classList.add('hidden');
-                updateTierView();
+                btnUsage.className = 'metric-btn px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 text-gray-600 hover:bg-gray-200';
+                btnCost.className = `metric-btn active px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 bg-${config.color}-600 text-white shadow-md`;
             }
+            
+            if (currentView === 'comparison') renderComparisonChart();
         }
 
         // Comparison View
         function updateComparisonView() {
-            const years = [...new Set(electricityData.map(r => r.date.split('-')[0]))].sort();
+            const years = [...new Set(allData[currentType].map(r => r.date.split('-')[0]))].sort();
             if (visibleYears.size === 0 && years.length > 0) {
                 years.forEach(year => visibleYears.add(year));
             }
@@ -793,15 +622,17 @@
         function renderComparisonChart() {
             if (currentChart) currentChart.destroy();
             const ctx = document.getElementById('mainChart').getContext('2d');
-            const years = [...new Set(electricityData.map(r => r.date.split('-')[0]))].sort();
+            const years = [...new Set(allData[currentType].map(r => r.date.split('-')[0]))].sort();
             const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-            const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#feca57', '#48dbfb', '#ff9ff3'];
+            const colors = ['#667eea', '#3b82f6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6', '#ec4899'];
+            const config = TYPE_CONFIG[currentType];
             
             const datasets = years.map((year, index) => {
                 const data = months.map((_, m) => {
-                    const record = electricityData.find(r => r.date === `${year}-${String(m+1).padStart(2,'0')}`);
-                    return record ? (currentMetric === 'kwh' ? record.kwh : record.cost) : null;
+                    const record = allData[currentType].find(r => r.date === `${year}-${String(m+1).padStart(2,'0')}`);
+                    return record ? (currentMetric === 'usage' ? record.usage : record.cost) : null;
                 });
+                
                 return {
                     label: year + '年',
                     data: data,
@@ -831,7 +662,7 @@
                                     let label = context.dataset.label || '';
                                     if (label) label += ': ';
                                     label += context.parsed.y !== null ? context.parsed.y.toFixed(2) : '--';
-                                    label += currentMetric === 'kwh' ? ' 度' : ' 元';
+                                    label += currentMetric === 'usage' ? ` ${config.unit}` : ' 元';
                                     return label;
                                 }
                             }
@@ -844,12 +675,12 @@
                             grid: { color: 'rgba(0,0,0,0.05)' },
                             ticks: {
                                 callback: function(value) {
-                                    return value + (currentMetric === 'kwh' ? ' 度' : ' 元');
+                                    return value + (currentMetric === 'usage' ? ` ${config.unit}` : ' 元');
                                 }
                             },
                             title: {
                                 display: true,
-                                text: currentMetric === 'kwh' ? '用电量 (度)' : '电费金额 (元)',
+                                text: currentMetric === 'usage' ? `用量 (${config.unit})` : '费用 (元)',
                                 font: { weight: '600' }
                             }
                         }
@@ -864,20 +695,16 @@
                 container.innerHTML = '<span class="text-sm text-gray-400">暂无数据</span>';
                 return;
             }
-            container.innerHTML = years.map(year => {
+            const colors = ['#667eea', '#3b82f6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981'];
+            
+            container.innerHTML = years.map((year, index) => {
                 const isVisible = visibleYears.has(year);
-                const color = getYearColor(year);
+                const color = colors[index % colors.length];
                 return `
                     <button onclick="toggleYear('${year}')" class="year-toggle px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all duration-200 ${isVisible ? '' : 'inactive'}" style="${isVisible ? `background-color: ${color}20; border-color: ${color}; color: ${color}` : ''}">
                         <i class="fas ${isVisible ? 'fa-eye' : 'fa-eye-slash'} mr-1"></i>${year}年
                     </button>`;
             }).join('');
-        }
-
-        function getYearColor(year) {
-            const colors = ['#667eea', '#f093fb', '#4facfe', '#43e97b', '#fa709a', '#feca57', '#48dbfb', '#ff9ff3'];
-            const years = [...new Set(electricityData.map(r => r.date.split('-')[0]))].sort();
-            return colors[years.indexOf(year) % colors.length];
         }
 
         function toggleYear(year) {
@@ -886,16 +713,9 @@
             updateComparisonView();
         }
 
-        function switchMetric(metric) {
-            currentMetric = metric;
-            document.getElementById('btnKwh').className = metric === 'kwh' ? 'metric-btn active px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 bg-indigo-600 text-white shadow-md' : 'metric-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 text-gray-600 hover:bg-gray-200';
-            document.getElementById('btnCost').className = metric === 'cost' ? 'metric-btn active px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 bg-indigo-600 text-white shadow-md' : 'metric-btn px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 flex items-center space-x-2 text-gray-600 hover:bg-gray-200';
-            if (currentView === 'comparison') renderComparisonChart();
-        }
-
-        // Tier View Functions
+        // Tier View
         function updateTierView() {
-            const years = [...new Set(electricityData.map(r => r.date.split('-')[0]))].sort();
+            const years = [...new Set(allData[currentType].map(r => r.date.split('-')[0]))].sort();
             const select = document.getElementById('tierYearSelect');
             if (years.length === 0) {
                 select.innerHTML = '<option value="">无数据</option>';
@@ -915,7 +735,9 @@
         function renderTierChart() {
             if (currentChart) currentChart.destroy();
             const ctx = document.getElementById('mainChart').getContext('2d');
-            const yearData = electricityData.filter(r => r.date.startsWith(selectedTierYear)).sort((a, b) => a.date.localeCompare(b.date));
+            const yearData = allData[currentType].filter(r => r.date.startsWith(selectedTierYear)).sort((a, b) => a.date.localeCompare(b.date));
+            const settings = tierSettings[currentType];
+            const config = TYPE_CONFIG[currentType];
             
             if (yearData.length === 0) {
                 currentChart = new Chart(ctx, { type: 'line', data: { labels: [], datasets: [] }, options: { responsive: true, maintainAspectRatio: false } });
@@ -928,7 +750,7 @@
             
             for (let m = 1; m <= 12; m++) {
                 const record = yearData.find(r => parseInt(r.date.split('-')[1]) === m);
-                const value = record ? record.kwh : 0;
+                const value = record ? record.usage : 0;
                 cumulative += value;
                 monthlyData.push(value);
                 cumulativeData.push(cumulative);
@@ -940,10 +762,10 @@
                     labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
                     datasets: [
                         {
-                            label: '累计用电量',
+                            label: `累计用量 (${config.unit})`,
                             data: cumulativeData,
-                            borderColor: '#667eea',
-                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                            borderColor: '#374151',
+                            backgroundColor: 'rgba(55, 65, 81, 0.1)',
                             borderWidth: 3,
                             pointRadius: 6,
                             pointHoverRadius: 8,
@@ -951,19 +773,19 @@
                             tension: 0.3
                         },
                         {
-                            label: '当月用电量',
+                            label: `当月用量 (${config.unit})`,
                             data: monthlyData,
                             type: 'bar',
                             backgroundColor: monthlyData.map((v, i) => {
                                 const cum = cumulativeData[i];
-                                if (cum <= tierSettings.tier1) return 'rgba(34, 197, 94, 0.6)';
-                                if (cum <= tierSettings.tier2) return 'rgba(234, 179, 8, 0.6)';
+                                if (cum <= settings.tier1) return 'rgba(34, 197, 94, 0.6)';
+                                if (cum <= settings.tier2) return 'rgba(234, 179, 8, 0.6)';
                                 return 'rgba(239, 68, 68, 0.6)';
                             }),
                             borderColor: monthlyData.map((v, i) => {
                                 const cum = cumulativeData[i];
-                                if (cum <= tierSettings.tier1) return 'rgb(34, 197, 94)';
-                                if (cum <= tierSettings.tier2) return 'rgb(234, 179, 8)';
+                                if (cum <= settings.tier1) return 'rgb(34, 197, 94)';
+                                if (cum <= settings.tier2) return 'rgb(234, 179, 8)';
                                 return 'rgb(239, 68, 68)';
                             }),
                             borderWidth: 1,
@@ -980,63 +802,65 @@
                         legend: { position: 'top', labels: { usePointStyle: true, padding: 20 } },
                         annotation: {
                             annotations: {
-                                line1: { type: 'line', yMin: tierSettings.tier1, yMax: tierSettings.tier1, borderColor: 'rgb(34, 197, 94)', borderWidth: 2, borderDash: [5, 5], label: { content: '一阶上限', enabled: true, position: 'end' } },
-                                line2: { type: 'line', yMin: tierSettings.tier2, yMax: tierSettings.tier2, borderColor: 'rgb(234, 179, 8)', borderWidth: 2, borderDash: [5, 5], label: { content: '二阶上限', enabled: true, position: 'end' } }
+                                line1: { type: 'line', yMin: settings.tier1, yMax: settings.tier1, borderColor: 'rgb(34, 197, 94)', borderWidth: 2, borderDash: [5, 5], label: { content: `一阶上限 (${settings.tier1})`, enabled: true, position: 'end' } },
+                                line2: { type: 'line', yMin: settings.tier2, yMax: settings.tier2, borderColor: 'rgb(234, 179, 8)', borderWidth: 2, borderDash: [5, 5], label: { content: `二阶上限 (${settings.tier2})`, enabled: true, position: 'end' } }
                             }
                         }
                     },
                     scales: {
                         x: { grid: { display: false } },
-                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: '累计用电量 (度)', color: '#667eea', font: { weight: 'bold' } }, grid: { color: 'rgba(0,0,0,0.05)' }, suggestedMax: tierSettings.tier2 * 1.2 },
-                        'y-monthly': { type: 'linear', display: true, position: 'right', title: { display: true, text: '当月用电量 (度)' }, grid: { display: false } }
+                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: `累计用量 (${config.unit})`, color: '#374151', font: { weight: 'bold' } }, grid: { color: 'rgba(0,0,0,0.05)' }, suggestedMax: settings.tier2 * 1.2 },
+                        'y-monthly': { type: 'linear', display: true, position: 'right', title: { display: true, text: `当月用量 (${config.unit})` }, grid: { display: false } }
                     }
                 }
             });
         }
 
         function updateTierTable() {
-            const years = [...new Set(electricityData.map(r => r.date.split('-')[0]))].sort();
+            const years = [...new Set(allData[currentType].map(r => r.date.split('-')[0]))].sort();
             const tbody = document.getElementById('tierTableBody');
+            const settings = tierSettings[currentType];
+            
             if (years.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-400">暂无数据</td></tr>';
                 return;
             }
 
             tbody.innerHTML = years.map(year => {
-                const yearData = electricityData.filter(r => r.date.startsWith(year)).sort((a, b) => a.date.localeCompare(b.date));
+                const yearData = allData[currentType].filter(r => r.date.startsWith(year)).sort((a, b) => a.date.localeCompare(b.date));
                 let cumulative = 0;
                 let tier1Break = null;
                 let tier2Break = null;
-                let tier1Kwh = 0, tier2Kwh = 0, tier3Kwh = 0;
+                let tier1Usage = 0, tier2Usage = 0, tier3Usage = 0;
 
                 yearData.forEach(record => {
                     const month = parseInt(record.date.split('-')[1]);
                     const startCum = cumulative;
-                    cumulative += record.kwh;
+                    cumulative += record.usage;
                     
-                    if (startCum < tierSettings.tier1) {
-                        const remaining = tierSettings.tier1 - startCum;
-                        tier1Kwh += Math.min(record.kwh, remaining);
-                        const afterTier1 = record.kwh - Math.min(record.kwh, remaining);
+                    if (startCum < settings.tier1) {
+                        const remaining = settings.tier1 - startCum;
+                        tier1Usage += Math.min(record.usage, remaining);
+                        const afterTier1 = record.usage - Math.min(record.usage, remaining);
                         if (afterTier1 > 0) {
-                            if (startCum + Math.min(record.kwh, remaining) < tierSettings.tier2) {
-                                const remaining2 = tierSettings.tier2 - (startCum + Math.min(record.kwh, remaining));
-                                tier2Kwh += Math.min(afterTier1, remaining2);
-                                tier3Kwh += Math.max(0, afterTier1 - remaining2);
+                            if (startCum + Math.min(record.usage, remaining) < settings.tier2) {
+                                const remaining2 = settings.tier2 - (startCum + Math.min(record.usage, remaining));
+                                tier2Usage += Math.min(afterTier1, remaining2);
+                                tier3Usage += Math.max(0, afterTier1 - remaining2);
                             } else {
-                                tier3Kwh += afterTier1;
+                                tier3Usage += afterTier1;
                             }
                         }
-                    } else if (startCum < tierSettings.tier2) {
-                        const remaining = tierSettings.tier2 - startCum;
-                        tier2Kwh += Math.min(record.kwh, remaining);
-                        tier3Kwh += Math.max(0, record.kwh - remaining);
+                    } else if (startCum < settings.tier2) {
+                        const remaining = settings.tier2 - startCum;
+                        tier2Usage += Math.min(record.usage, remaining);
+                        tier3Usage += Math.max(0, record.usage - remaining);
                     } else {
-                        tier3Kwh += record.kwh;
+                        tier3Usage += record.usage;
                     }
 
-                    if (!tier1Break && cumulative > tierSettings.tier1) tier1Break = month;
-                    if (!tier2Break && cumulative > tierSettings.tier2) tier2Break = month;
+                    if (!tier1Break && cumulative > settings.tier1) tier1Break = month;
+                    if (!tier2Break && cumulative > settings.tier2) tier2Break = month;
                 });
 
                 return `
@@ -1044,436 +868,182 @@
                         <td class="px-4 py-3 font-medium text-gray-900">${year}</td>
                         <td class="px-4 py-3">${tier1Break ? `<span class="tier-badge tier-2">第${tier1Break}月</span>` : '<span class="text-gray-400">-</span>'}</td>
                         <td class="px-4 py-3">${tier2Break ? `<span class="tier-badge tier-3">第${tier2Break}月</span>` : '<span class="text-gray-400">-</span>'}</td>
-                        <td class="px-4 py-3 text-green-700 font-medium">${tier1Kwh.toFixed(1)} 度</td>
-                        <td class="px-4 py-3 text-yellow-700 font-medium">${tier2Kwh.toFixed(1)} 度</td>
-                        <td class="px-4 py-3 text-red-700 font-medium">${tier3Kwh.toFixed(1)} 度</td>
+                        <td class="px-4 py-3 text-green-700 font-medium">${tier1Usage.toFixed(1)}</td>
+                        <td class="px-4 py-3 text-yellow-700 font-medium">${tier2Usage.toFixed(1)}</td>
+                        <td class="px-4 py-3 text-red-700 font-medium">${tier3Usage.toFixed(1)}</td>
                     </tr>`;
             }).join('');
         }
 
-        // Tier Settings
-        function loadTierSettings() {
-            const saved = localStorage.getItem('tierSettings');
-            if (saved) {
-                tierSettings = JSON.parse(saved);
-                document.getElementById('tier1Limit').value = tierSettings.tier1;
-                document.getElementById('tier2Limit').value = tierSettings.tier2;
-            }
-            updateTierLabels();
-        }
-
-        function updateTierSettings() {
-            tierSettings.tier1 = parseInt(document.getElementById('tier1Limit').value) || 260;
-            tierSettings.tier2 = parseInt(document.getElementById('tier2Limit').value) || 600;
-            localStorage.setItem('tierSettings', JSON.stringify(tierSettings));
-            updateTierLabels();
-            if (currentView === 'tier') updateTierView();
-            updateCurrentTierDisplay();
-
-            // 如果使用本地 JSON 模式，提示用户下载更新
-            if (USE_LOCAL_JSON) {
-                setTimeout(() => {
-                    if (confirm('阶梯设置已更新！是否下载 settings.json 文件以更新项目目录？\n（下载后请放入 data/ 文件夹并 git push）')) {
-                        downloadDataForCommit();
-                    }
-                }, 500);
-            }
-
-            showToast('阶梯设置已更新');
-        }
-
-        function updateTierLabels() {
-            document.getElementById('tier2Start').textContent = (tierSettings.tier1 + 1) + ' -';
-            document.getElementById('tier3Start').textContent = (tierSettings.tier2 + 1) + ' 度以上';
-            document.getElementById('legendTier1').textContent = tierSettings.tier1;
-            document.getElementById('legendTier2Start').textContent = tierSettings.tier1 + 1;
-            document.getElementById('legendTier2').textContent = tierSettings.tier2;
-            document.getElementById('legendTier3Start').textContent = tierSettings.tier2 + 1;
-        }
-
-        // Utility Functions
-        function renderRecentList() {
-            const container = document.getElementById('recentList');
-            if (electricityData.length === 0) {
-                container.innerHTML = '<p class="text-gray-400 text-center py-4">暂无记录</p>';
-                return;
-            }
-            const reversed = [...electricityData].reverse();
-            container.innerHTML = reversed.slice(0, 10).map(record => `
-                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition group">
-                    <div>
-                        <p class="font-medium text-gray-800">${record.date}</p>
-                        <p class="text-xs text-gray-500">${record.kwh}度 · ¥${record.cost}</p>
-                    </div>
-                    <button onclick="deleteRecord('${record.date}')" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition"><i class="fas fa-trash-alt"></i></button>
-                </div>`).join('');
-        }
-
+        // Stats & Analysis
         function updateStats() {
             const currentYear = new Date().getFullYear();
-            const yearData = electricityData.filter(r => r.date.startsWith(currentYear));
+            const yearData = allData[currentType].filter(r => r.date.startsWith(currentYear));
             const yearCost = yearData.reduce((sum, r) => sum + r.cost, 0);
-            const yearKwh = yearData.reduce((sum, r) => sum + r.kwh, 0);
+            const yearUsage = yearData.reduce((sum, r) => sum + r.usage, 0);
+            
             document.getElementById('currentYearCost').textContent = `¥${yearCost.toFixed(2)}`;
-            document.getElementById('currentYearKwh').textContent = `${yearKwh.toFixed(1)} 度`;
-            document.getElementById('totalRecords').textContent = electricityData.length;
+            document.getElementById('currentYearUsage').textContent = `${yearUsage.toFixed(1)} ${TYPE_CONFIG[currentType].unit}`;
+            document.getElementById('totalRecords').textContent = allData[currentType].length;
             
             const lastYear = currentYear - 1;
-            const lastYearData = electricityData.filter(r => r.date.startsWith(lastYear));
+            const lastYearData = allData[currentType].filter(r => r.date.startsWith(lastYear));
             const costDiff = lastYearData.length ? ((yearCost - lastYearData.reduce((s,r)=>s+r.cost,0)) / lastYearData.reduce((s,r)=>s+r.cost,0) * 100).toFixed(1) : 0;
+            const usageDiff = lastYearData.length ? ((yearUsage - lastYearData.reduce((s,r)=>s+r.usage,0)) / lastYearData.reduce((s,r)=>s+r.usage,0) * 100).toFixed(1) : 0;
+            
             document.getElementById('currentYearCompare').innerHTML = lastYearData.length ? `较去年 <span class="${costDiff > 0 ? 'text-red-500' : 'text-green-500'}">${costDiff > 0 ? '+' : ''}${costDiff}%</span>` : '较去年 --';
+            document.getElementById('currentYearUsageCompare').innerHTML = lastYearData.length ? `较去年 <span class="${usageDiff > 0 ? 'text-red-500' : 'text-green-500'}">${usageDiff > 0 ? '+' : ''}${usageDiff}%</span>` : '较去年 --';
+            
+            updateCurrentTierDisplay();
         }
 
         function updateCurrentTierDisplay() {
             const currentYear = new Date().getFullYear().toString();
-            const yearData = electricityData.filter(r => r.date.startsWith(currentYear));
-            const totalKwh = yearData.reduce((sum, r) => sum + r.kwh, 0);
+            const yearData = allData[currentType].filter(r => r.date.startsWith(currentYear));
+            const totalUsage = yearData.reduce((sum, r) => sum + r.usage, 0);
+            const settings = tierSettings[currentType];
             
             let tier = 1;
-            if (totalKwh > tierSettings.tier2) tier = 3;
-            else if (totalKwh > tierSettings.tier1) tier = 2;
+            if (totalUsage > settings.tier2) tier = 3;
+            else if (totalUsage > settings.tier1) tier = 2;
             
             const tierNames = ['', '第一阶梯', '第二阶梯', '第三阶梯'];
             const tierColors = ['', 'text-green-600', 'text-yellow-600', 'text-red-600'];
             
             document.getElementById('currentTier').textContent = tierNames[tier];
             document.getElementById('currentTier').className = `text-2xl font-bold mt-1 ${tierColors[tier]}`;
-            document.getElementById('currentTierInfo').textContent = `本年累计 ${totalKwh.toFixed(0)} 度`;
+            document.getElementById('currentTierInfo').textContent = `本年累计 ${totalUsage.toFixed(1)} ${TYPE_CONFIG[currentType].unit}`;
         }
 
         function updateAnalysis() {
             const monthStats = {};
             const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-            electricityData.forEach(r => {
+            
+            allData[currentType].forEach(r => {
                 const month = parseInt(r.date.split('-')[1]) - 1;
-                if (!monthStats[month]) monthStats[month] = { kwh: [], cost: [] };
-                monthStats[month].kwh.push(r.kwh);
-                monthStats[month].cost.push(r.cost);
+                if (!monthStats[month]) monthStats[month] = [];
+                monthStats[month].push(r.usage);
             });
             
             const averages = Object.keys(monthStats).map(m => ({
                 month: parseInt(m),
-                avgKwh: monthStats[m].kwh.reduce((a,b) => a+b, 0) / monthStats[m].kwh.length
-            })).sort((a, b) => b.avgKwh - a.avgKwh);
+                avg: monthStats[m].reduce((a,b) => a+b, 0) / monthStats[m].length
+            })).sort((a, b) => b.avg - a.avg);
             
             const peak = averages.slice(0, 3);
             const low = averages.slice(-3).reverse();
             
             document.getElementById('peakMonths').innerHTML = peak.map(p => `
-                <div class="flex justify-between items-center"><span class="text-sm text-gray-600">${months[p.month]}</span><span class="text-sm font-medium text-gray-900">${p.avgKwh.toFixed(1)}度</span></div>
+                <div class="flex justify-between items-center"><span class="text-sm text-gray-600">${months[p.month]}</span><span class="text-sm font-medium text-gray-900">${p.avg.toFixed(1)}${TYPE_CONFIG[currentType].unit}</span></div>
             `).join('') || '<p class="text-gray-400 text-sm">数据不足</p>';
             
             document.getElementById('lowMonths').innerHTML = low.map(l => `
-                <div class="flex justify-between items-center"><span class="text-sm text-gray-600">${months[l.month]}</span><span class="text-sm font-medium text-gray-900">${l.avgKwh.toFixed(1)}度</span></div>
+                <div class="flex justify-between items-center"><span class="text-sm text-gray-600">${months[l.month]}</span><span class="text-sm font-medium text-gray-900">${l.avg.toFixed(1)}${TYPE_CONFIG[currentType].unit}</span></div>
             `).join('') || '<p class="text-gray-400 text-sm">数据不足</p>';
         }
 
         // Import/Export
+        function exportAllData() {
+            const dataStr = JSON.stringify({
+                version: '2.0',
+                exportDate: new Date().toISOString(),
+                data: allData,
+                tierSettings: tierSettings
+            }, null, 2);
+            
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', `家庭能耗数据_${new Date().toISOString().split('T')[0]}.json`);
+            linkElement.click();
+            showToast('全部数据已导出');
+        }
+
         function handleFileImport(e) {
             const file = e.target.files[0];
             if (!file) return;
             
             const reader = new FileReader();
             reader.onload = (event) => {
-                const content = event.target.result;
-                const fileName = file.name.toLowerCase();
-                
-                if (fileName.endsWith('.json')) {
-                    try {
-                        const data = JSON.parse(content);
-                        if (Array.isArray(data)) {
-                            let imported = 0;
-                            data.forEach(r => {
-                                if (r.date && !isNaN(r.kwh) && !isNaN(r.cost)) {
-                                    addRecord(r.date, parseFloat(r.kwh), parseFloat(r.cost));
-                                    imported++;
-                                }
-                            });
-                            showToast(`成功恢复 ${imported} 条记录`);
-                        } else {
-                            showToast('JSON 格式不正确');
-                        }
-                    } catch (err) {
-                        showToast('JSON 解析失败');
+                try {
+                    const content = event.target.result;
+                    const data = JSON.parse(content);
+                    
+                    if (data.version && data.data) {
+                        // 新版格式（全部数据）
+                        allData = { ...allData, ...data.data };
+                        if (data.tierSettings) tierSettings = { ...tierSettings, ...data.tierSettings };
+                        saveData();
+                        
+                        const totalCount = Object.values(allData).reduce((sum, arr) => sum + arr.length, 0);
+                        showToast(`成功恢复 ${totalCount} 条记录（含水电燃）`);
+                    } else if (Array.isArray(data)) {
+                        // 旧版格式（仅当前类型）
+                        allData[currentType] = data;
+                        saveData();
+                        showToast(`成功导入 ${data.length} 条${TYPE_CONFIG[currentType].name}记录`);
                     }
-                } else {
-                    const records = [];
-                    const pattern1 = /(\d{4}-\d{2})\s*用电[量]*\s*[：:]\s*(\d+\.?\d*)\s*[度kwh]*\s*电费[：:]\s*[¥]?(\d+\.?\d*)/gi;
-                    let match;
-                    while ((match = pattern1.exec(content)) !== null) {
-                        records.push({ date: match[1], kwh: parseFloat(match[2]), cost: parseFloat(match[3]) });
-                    }
-                    if (records.length === 0) {
-                        const lines = content.split('\n');
-                        lines.forEach(line => {
-                            const parts = line.split(',');
-                            if (parts.length >= 3 && parts[0].match(/^\d{4}-\d{2}$/)) {
-                                records.push({ date: parts[0].trim(), kwh: parseFloat(parts[1]), cost: parseFloat(parts[2]) });
-                            }
-                        });
-                    }
-                    if (records.length > 0) {
-                        records.forEach(r => { if (!isNaN(r.kwh) && !isNaN(r.cost)) addRecord(r.date, r.kwh, r.cost); });
-                        showToast(`成功导入 ${records.length} 条记录`);
-                    } else {
-                        showToast('未能识别文件格式');
-                    }
+                    
+                    updateUI();
+                    updateBadges();
+                } catch (err) {
+                    showToast('文件解析失败');
                 }
             };
             reader.readAsText(file);
         }
 
-        function exportData() {
-            const dataStr = JSON.stringify(electricityData, null, 2);
-            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-            const linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', `electricity_backup_${new Date().toISOString().split('T')[0]}.json`);
-            linkElement.click();
-            showToast('备份已下载');
+        // UI Helpers
+        function renderRecentList() {
+            const container = document.getElementById('recentList');
+            const data = allData[currentType];
+            if (data.length === 0) {
+                container.innerHTML = '<p class="text-gray-400 text-center py-4">暂无记录</p>';
+                return;
+            }
+            const reversed = [...data].reverse();
+            container.innerHTML = reversed.slice(0, 10).map(record => `
+                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition group">
+                    <div>
+                        <p class="font-medium text-gray-800">${record.date}</p>
+                        <p class="text-xs text-gray-500">${record.usage}${TYPE_CONFIG[currentType].unit} · ¥${record.cost}</p>
+                    </div>
+                    <button onclick="deleteRecord('${record.date}')" class="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition"><i class="fas fa-trash-alt"></i></button>
+                </div>`).join('');
         }
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
             document.getElementById('toastMsg').textContent = msg;
             toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => { toast.classList.add('translate-y-20', 'opacity-0'); }, 3000);
+            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
         }
 
-        // OCR Functions (abbreviated for space)
-        function setupBatchDragAndDrop() {
-            const dropZone = document.getElementById('batchDropZone');
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, preventDefaults, false);
-                document.body.addEventListener(eventName, preventDefaults, false);
+        function setupEventListeners() {
+            // Form submission
+            document.getElementById('entryForm').addEventListener('submit', (e) => {
+                e.preventDefault();
+                const date = document.getElementById('entryDate').value;
+                const usage = parseFloat(document.getElementById('entryUsage').value);
+                const cost = parseFloat(document.getElementById('entryCost').value);
+                
+                if (date && !isNaN(usage) && !isNaN(cost)) {
+                    addRecord(date, usage, cost);
+                    e.target.reset();
+                    document.getElementById('entryDate').value = date;
+                    showToast('添加成功');
+                }
             });
-            function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
-            ['dragenter', 'dragover'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => { if(!isProcessing) dropZone.classList.add('drag-active'); }, false);
-            });
-            ['dragleave', 'drop'].forEach(eventName => {
-                dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
-            });
-            dropZone.addEventListener('drop', handleBatchDrop, false);
-            dropZone.addEventListener('click', () => { if(!isProcessing) document.getElementById('batchImageInput').click(); });
+
+            // Date default
+            const now = new Date();
+            document.getElementById('entryDate').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
         }
 
-        function handleBatchDrop(e) {
-            const dt = e.dataTransfer;
-            if (dt.files.length > 0) processBatchFiles(dt.files);
-        }
-
+        // OCR Placeholder (simplified)
         function handleBatchUpload(e) {
-            if (e.target.files.length > 0) processBatchFiles(e.target.files);
+            showToast('AI识别功能开发中，请使用手动添加');
         }
-
-        function processBatchFiles(files) {
-            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
-            if (imageFiles.length === 0) { showToast('请选择图片文件'); return; }
-            batchFiles = imageFiles.length > 20 ? imageFiles.slice(0, 20) : imageFiles;
-            ocrResults = [];
-            updateBatchPreview();
-            startBatchOCR();
-        }
-
-        function updateBatchPreview() {
-            const previewDiv = document.getElementById('batchImagePreview');
-            const grid = document.getElementById('previewGrid');
-            document.getElementById('imageCount').textContent = batchFiles.length;
-            previewDiv.classList.remove('hidden');
-            grid.innerHTML = batchFiles.map((file, index) => {
-                const url = URL.createObjectURL(file);
-                return `<div class="image-thumb relative aspect-square rounded-lg overflow-hidden border-2 border-gray-200 bg-gray-100" id="thumb-${index}">
-                    <img src="${url}" class="w-full h-full object-cover">
-                    <div class="absolute inset-0 bg-black/40 flex items-center justify-center status-overlay" id="overlay-${index}"><span class="text-white text-xs">等待</span></div>
-                    <div class="absolute top-1 left-1 bg-black/50 text-white text-xs px-1.5 rounded">${index + 1}</div>
-                </div>`;
-            }).join('');
-        }
-
-        async function startBatchOCR() {
-            if (batchFiles.length === 0 || isProcessing) return;
-            isProcessing = true;
-            const progressDiv = document.getElementById('batchProgress');
-            const progressBar = document.getElementById('batchProgressBar');
-            const statusText = document.getElementById('batchStatus');
-            const percentText = document.getElementById('batchPercent');
-            const scanningEffect = document.getElementById('scanningEffect');
-            const dropZone = document.getElementById('batchDropZone');
-            
-            progressDiv.classList.remove('hidden');
-            scanningEffect.classList.remove('hidden');
-            dropZone.classList.add('processing');
-
-            for (let i = 0; i < batchFiles.length; i++) {
-                const file = batchFiles[i];
-                const percent = Math.round(((i) / batchFiles.length) * 100);
-                progressBar.style.width = percent + '%';
-                percentText.textContent = percent + '%';
-                statusText.textContent = `正在识别第 ${i + 1}/${batchFiles.length} 张`;
-                updateThumbStatus(i, 'processing');
-
-                try {
-                    const result = await Tesseract.recognize(file, 'chi_sim+eng', { logger: m => {} });
-                    const extractedData = parseOCRText(result.data.text);
-                    if (extractedData) {
-                        ocrResults.push({...extractedData, rawText: result.data.text, fileName: file.name, id: Date.now() + i, selected: true, confidence: extractedData.confidence || 'medium'});
-                        updateThumbStatus(i, 'success');
-                    } else {
-                        updateThumbStatus(i, 'error');
-                    }
-                } catch (error) {
-                    updateThumbStatus(i, 'error');
-                }
-            }
-            
-            progressBar.style.width = '100%';
-            percentText.textContent = '100%';
-            statusText.textContent = '识别完成';
-            scanningEffect.classList.add('hidden');
-            dropZone.classList.remove('processing');
-            isProcessing = false;
-            
-            if (ocrResults.length > 0) {
-                showOCRResults();
-                showToast(`成功识别 ${ocrResults.length} 条记录`);
-            } else {
-                showToast('未能识别出有效数据');
-            }
-        }
-
-        function updateThumbStatus(index, status) {
-            const overlay = document.getElementById(`overlay-${index}`);
-            const thumb = document.getElementById(`thumb-${index}`);
-            if (!overlay) return;
-            const icons = { processing: '<i class="fas fa-spinner fa-spin text-white"></i>', success: '<i class="fas fa-check-circle text-green-400 text-xl"></i>', error: '<i class="fas fa-times-circle text-red-400 text-xl"></i>' };
-            overlay.innerHTML = icons[status];
-            if (status === 'success') thumb.classList.add('border-green-400');
-            else if (status === 'error') thumb.classList.add('border-red-400');
-        }
-
-        function parseOCRText(text) {
-            const patterns = [
-                /(\d{4})[-年](\d{1,2})[-月]?\s*用?电[量]?[：:]?\s*(\d+\.?\d*)\s*[度kwhKWH]*[，,]?\s*电?费[：:]?\s*[¥]?\s*(\d+\.?\d*)\s*[元]?/i,
-                /(\d{4})年(\d{1,2})月\s*(\d+\.?\d*)\s*度.*[¥](\d+\.?\d*)/i,
-                /(?:日期|时间)[：:]?\s*(\d{4})[-年](\d{1,2})[-月]?(?:\d{2})?[日]?\s*.*?金额[：:]?\s*[¥]?\s*(\d+\.?\d*)\s*.*?电量[：:]?\s*(\d+\.?\d*)/i,
-                /用?电[量]?[：:]?\s*(\d+\.?\d*)\s*度.*(\d{4})年(\d{1,2})月.*(?:缴费|金额|电费)[：:]?\s*[¥]?\s*(\d+\.?\d*)/i
-            ];
-            for (let pattern of patterns) {
-                const match = text.match(pattern);
-                if (match) {
-                    let year, month, kwh, cost;
-                    if (pattern.toString().includes('用电量') && !pattern.toString().startsWith('/(?:日期')) {
-                        kwh = match[1]; year = match[2]; month = match[3]; cost = match[4];
-                    } else if (pattern.toString().startsWith('/(?:日期')) {
-                        year = match[1]; month = match[2]; cost = match[3]; kwh = match[4];
-                    } else {
-                        year = match[1]; month = match[2].padStart(2, '0'); kwh = match[3]; cost = match[4];
-                    }
-                    return { date: `${year}-${month.padStart(2, '0')}`, kwh: parseFloat(kwh), cost: parseFloat(cost), confidence: 'high' };
-                }
-            }
-            const dateMatch = text.match(/(\d{4})[-年.](\d{1,2})/);
-            const numbers = text.match(/(\d+\.?\d+)/g);
-            if (dateMatch && numbers && numbers.length >= 2) {
-                const candidates = numbers.map(n => parseFloat(n)).filter(n => n > 10 && n < 10000);
-                if (candidates.length >= 2) {
-                    candidates.sort((a, b) => b - a);
-                    return { date: `${dateMatch[1]}-${dateMatch[2].padStart(2, '0')}`, kwh: candidates[0], cost: candidates[1], confidence: 'medium' };
-                }
-            }
-            return null;
-        }
-
-        function showOCRResults() {
-            const panel = document.getElementById('ocrResultsPanel');
-            document.getElementById('recognizedCount').textContent = ocrResults.length;
-            panel.classList.remove('hidden');
-            renderResultsList();
-        }
-
-        function renderResultsList() {
-            const list = document.getElementById('ocrResultsList');
-            const selectedCount = ocrResults.filter(r => r.selected).length;
-            document.getElementById('selectedCount').textContent = selectedCount;
-            list.innerHTML = ocrResults.map((record) => `
-                <div class="bg-white border ${record.selected ? 'border-indigo-300 bg-indigo-50/30' : 'border-gray-200'} rounded-lg p-3 transition-all hover:shadow-md" id="result-${record.id}">
-                    <div class="flex items-start space-x-3">
-                        <input type="checkbox" ${record.selected ? 'checked' : ''} onchange="toggleResult(${record.id})" class="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300 cursor-pointer">
-                        <div class="flex-1 grid grid-cols-3 gap-2 text-sm">
-                            <div><label class="block text-xs text-gray-500 mb-0.5">日期</label><input type="month" value="${record.date}" onchange="updateResult(${record.id}, 'date', this.value)" class="w-full px-2 py-1 border rounded text-gray-800 font-medium text-xs"></div>
-                            <div><label class="block text-xs text-gray-500 mb-0.5">电量(度)</label><input type="number" value="${record.kwh}" step="0.01" onchange="updateResult(${record.id}, 'kwh', this.value)" class="w-full px-2 py-1 border rounded text-gray-800 font-medium text-xs"></div>
-                            <div><label class="block text-xs text-gray-500 mb-0.5">电费(元)</label><input type="number" value="${record.cost}" step="0.01" onchange="updateResult(${record.id}, 'cost', this.value)" class="w-full px-2 py-1 border rounded text-gray-800 font-medium text-xs"></div>
-                        </div>
-                        <button onclick="removeResult(${record.id})" class="text-gray-400 hover:text-red-500 transition p-1"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div class="mt-2 flex justify-between items-center text-xs text-gray-500 pl-7">
-                        <span class="truncate max-w-[200px]" title="${record.fileName}">${record.fileName}</span>
-                        ${record.confidence === 'medium' ? '<span class="text-orange-500 bg-orange-100 px-2 py-0.5 rounded">需核对</span>' : '<span class="text-green-500 bg-green-100 px-2 py-0.5 rounded">可信</span>'}
-                    </div>
-                </div>`).join('');
-        }
-
-        function toggleResult(id) {
-            const record = ocrResults.find(r => r.id === id);
-            if (record) { record.selected = !record.selected; renderResultsList(); }
-        }
-
-        function selectAllResults(select) {
-            ocrResults.forEach(r => r.selected = select);
-            renderResultsList();
-        }
-
-        function updateResult(id, field, value) {
-            const record = ocrResults.find(r => r.id === id);
-            if (record) { record[field] = field === 'date' ? value : parseFloat(value); }
-        }
-
-        function removeResult(id) {
-            ocrResults = ocrResults.filter(r => r.id !== id);
-            if (ocrResults.length === 0) {
-                document.getElementById('ocrResultsPanel').classList.add('hidden');
-            } else {
-                renderResultsList();
-                document.getElementById('recognizedCount').textContent = ocrResults.length;
-            }
-        }
-
-        function importSelected() {
-            const selected = ocrResults.filter(r => r.selected);
-            if (selected.length === 0) { showToast('请先选择要导入的记录'); return; }
-            selected.forEach(record => addRecord(record.date, record.kwh, record.cost));
-            ocrResults = ocrResults.filter(r => !r.selected);
-            if (ocrResults.length === 0) {
-                document.getElementById('ocrResultsPanel').classList.add('hidden');
-                document.getElementById('batchImagePreview').classList.add('hidden');
-                document.getElementById('batchProgress').classList.add('hidden');
-            } else {
-                renderResultsList();
-                document.getElementById('recognizedCount').textContent = ocrResults.length;
-            }
-            showToast(`成功导入 ${selected.length} 条记录`);
-        }
-
-        function clearBatch() {
-            if (isProcessing) { showToast('正在识别中，请等待完成'); return; }
-            batchFiles = []; ocrResults = [];
-            document.getElementById('batchImagePreview').classList.add('hidden');
-            document.getElementById('ocrResultsPanel').classList.add('hidden');
-            document.getElementById('batchProgress').classList.add('hidden');
-            showToast('已清空');
-        }
-
-        document.getElementById('entryForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const date = document.getElementById('entryDate').value;
-            const kwh = parseFloat(document.getElementById('entryKwh').value);
-            const cost = parseFloat(document.getElementById('entryCost').value);
-            addRecord(date, kwh, cost);
-            e.target.reset();
-            document.getElementById('entryDate').value = date;
-            showToast('添加成功');
-        });
     </script>
 </body>
 </html>
