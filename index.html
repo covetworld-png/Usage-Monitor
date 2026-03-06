@@ -37,6 +37,9 @@
         .type-tab.active { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .type-tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.5); }
         
+        .ocr-preview { max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.875rem; background: #f3f4f6; padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.5rem; }
+        .ocr-result-item { padding: 0.5rem; margin: 0.25rem 0; background: white; border-radius: 0.375rem; border-left: 3px solid #667eea; }
+        
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
@@ -76,6 +79,10 @@
                     <span class="font-bold text-xl tracking-tight">家庭能耗管家</span>
                 </div>
                 <div class="flex items-center space-x-3">
+                    <button onclick="syncFromDataFolder()" class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-2 text-sm" title="从data文件夹重新加载">
+                        <i class="fas fa-sync-alt"></i>
+                        <span class="hidden sm:inline">同步数据</span>
+                    </button>
                     <button onclick="exportAllData()" class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-2 text-sm">
                         <i class="fas fa-download"></i>
                         <span class="hidden sm:inline">导出全部</span>
@@ -143,7 +150,7 @@
                         <i class="fas fa-database text-xl"></i>
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-2">历史累计</p>
+                <p class="text-xs text-gray-500 mt-2">本地+云端</p>
             </div>
         </div>
 
@@ -161,22 +168,22 @@
                     <div class="space-y-3" id="tier-settings-container">
                         <!-- Dynamically populated based on type -->
                     </div>
-                    <p class="text-xs text-gray-500 mt-3">* 设置仅对当前类型生效</p>
+                    <p class="text-xs text-gray-500 mt-3">* 设置仅对当前类型生效，自动保存到本地</p>
                 </div>
 
                 <!-- Batch OCR -->
                 <div class="bg-white rounded-xl shadow-sm p-6 fade-in border-2 border-gray-100">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
                         <i class="fas fa-camera mr-2 text-gray-600"></i>
-                        AI 识别导入
+                        AI 识别导入 <span class="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded">支持水电气</span>
                     </h3>
                     
                     <div id="batchDropZone" class="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-gray-500 transition-all duration-300 cursor-pointer bg-gray-50 relative overflow-hidden group">
                         <input type="file" id="batchImageInput" accept="image/*" class="hidden" multiple onchange="handleBatchUpload(event)">
                         <div id="uploadPrompt">
                             <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 group-hover:text-gray-600 transition-colors mb-3"></i>
-                            <p class="text-sm font-medium text-gray-700">拖拽账单截图到此处</p>
-                            <p class="text-xs text-gray-500 mt-1">支持支付宝/微信账单</p>
+                            <p class="text-sm font-medium text-gray-700">拖拽或点击上传账单截图</p>
+                            <p class="text-xs text-gray-500 mt-1">支持支付宝/微信/国上国网/燃气公司账单</p>
                         </div>
                         <div id="scanningEffect" class="hidden absolute inset-0 bg-gray-900/5 pointer-events-none">
                             <div class="scan-line"></div>
@@ -191,6 +198,15 @@
                         <div class="w-full bg-gray-200 rounded-full h-2">
                             <div id="batchProgressBar" class="bg-gray-600 h-2 rounded-full transition-all" style="width: 0%"></div>
                         </div>
+                    </div>
+
+                    <!-- OCR Results Preview -->
+                    <div id="ocrResults" class="hidden mt-4">
+                        <h4 class="text-sm font-medium text-gray-700 mb-2">识别结果预览：</h4>
+                        <div id="ocrResultsList" class="ocr-preview space-y-2"></div>
+                        <button onclick="confirmOCRResults()" class="mt-3 w-full bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition text-sm font-medium">
+                            <i class="fas fa-check mr-1"></i> 确认导入 <span id="ocrCount">0</span> 条记录
+                        </button>
                     </div>
                 </div>
 
@@ -344,7 +360,9 @@
                 unit: '度',
                 color: 'indigo',
                 gradient: 'from-indigo-500 to-purple-600',
-                tierDefaults: { tier1: 260, tier2: 600 }
+                tierDefaults: { tier1: 260, tier2: 600 },
+                usageFields: ['kwh', 'usage', 'amount', 'quantity', 'degree', 'degrees', '电量', '用电'],
+                costFields: ['cost', 'fee', 'price', 'amount', 'total', '费用', '金额', '价格']
             },
             water: {
                 name: '水费',
@@ -352,7 +370,9 @@
                 unit: '吨',
                 color: 'blue',
                 gradient: 'from-blue-500 to-cyan-600',
-                tierDefaults: { tier1: 180, tier2: 260 } // 常见水费阶梯
+                tierDefaults: { tier1: 180, tier2: 260 },
+                usageFields: ['usage', 'amount', 'quantity', 'ton', 'tons', '立方', '用水', '水量'],
+                costFields: ['cost', 'fee', 'price', 'amount', 'total', '费用', '金额']
             },
             gas: {
                 name: '燃气',
@@ -360,7 +380,9 @@
                 unit: '立方米',
                 color: 'orange',
                 gradient: 'from-orange-500 to-red-600',
-                tierDefaults: { tier1: 300, tier2: 600 } // 常见燃气阶梯
+                tierDefaults: { tier1: 300, tier2: 600 },
+                usageFields: ['usage', 'amount', 'quantity', 'cube', 'm3', 'm³', '立方', '用气', '气量'],
+                costFields: ['cost', 'fee', 'price', 'amount', 'total', '费用', '金额']
             }
         };
 
@@ -371,6 +393,7 @@
         let currentChart = null;
         let visibleYears = new Set();
         let selectedTierYear = new Date().getFullYear().toString();
+        let ocrResultsBuffer = [];
 
         // Data Structure
         let allData = {
@@ -385,25 +408,211 @@
             gas: { tier1: 300, tier2: 600 }
         };
 
+        // 智能字段识别函数 - 自动查找用量和费用字段
+        function detectFields(record, type) {
+            const config = TYPE_CONFIG[type];
+            const fields = Object.keys(record);
+            
+            // 查找用量字段（按优先级）
+            let usageField = null;
+            for (let field of config.usageFields) {
+                if (fields.includes(field) && record[field] !== undefined && record[field] !== null) {
+                    usageField = field;
+                    break;
+                }
+            }
+            // 如果没找到，尝试查找数字类型的字段（排除date、timestamp等）
+            if (!usageField) {
+                for (let field of fields) {
+                    if (['date', 'timestamp', 'source', 'type'].includes(field)) continue;
+                    if (typeof record[field] === 'number' || !isNaN(parseFloat(record[field]))) {
+                        // 如果找到另一个可能是费用的字段（值较小），则当前是用量
+                        usageField = field;
+                        break;
+                    }
+                }
+            }
+            
+            // 查找费用字段（按优先级）
+            let costField = null;
+            for (let field of config.costFields) {
+                if (fields.includes(field) && record[field] !== undefined && record[field] !== null) {
+                    costField = field;
+                    break;
+                }
+            }
+            
+            return { usageField, costField };
+        }
+
+        // 数据清洗和字段映射函数
+        function sanitizeRecord(record, type = currentType) {
+            // 自动识别字段
+            const { usageField, costField } = detectFields(record, type);
+            
+            // 提取用量（尝试所有可能的字段名）
+            let usage = 0;
+            if (usageField && record[usageField] !== undefined) {
+                usage = parseFloat(record[usageField]);
+            } else {
+                // 备用：尝试常见变体
+                usage = parseFloat(
+                    record.usage ?? 
+                    record.kwh ?? 
+                    record.amount ?? 
+                    record.quantity ?? 
+                    record.用电 ?? 
+                    record.电量 ?? 
+                    record.用水 ?? 
+                    record.用气 ?? 
+                    0
+                );
+            }
+            
+            // 提取费用
+            let cost = 0;
+            if (costField && record[costField] !== undefined) {
+                cost = parseFloat(record[costField]);
+            } else {
+                cost = parseFloat(
+                    record.cost ?? 
+                    record.fee ?? 
+                    record.price ?? 
+                    record.total ?? 
+                    record.费用 ?? 
+                    record.金额 ?? 
+                    0
+                );
+            }
+            
+            return {
+                date: record.date || '',
+                usage: isNaN(usage) ? 0 : usage,
+                cost: isNaN(cost) ? 0 : cost,
+                timestamp: record.timestamp || new Date().toISOString(),
+                source: record.source || 'import',
+                _originalFields: { usageField, costField } // 调试用
+            };
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
-            loadData();
-            loadTierSettings();
-            updateUI();
+            loadFromLocalStorage();
+            loadFromDataFolder();
             setupEventListeners();
+            setupDragAndDrop();
         });
 
-        function loadData() {
+        function loadFromLocalStorage() {
             const saved = localStorage.getItem('utilityData');
             if (saved) {
-                const parsed = JSON.parse(saved);
-                allData = { ...allData, ...parsed.data };
-                tierSettings = { ...tierSettings, ...parsed.tierSettings };
+                try {
+                    const parsed = JSON.parse(saved);
+                    if (parsed.data) {
+                        Object.keys(parsed.data).forEach(type => {
+                            if (allData[type] !== undefined && Array.isArray(parsed.data[type])) {
+                                allData[type] = parsed.data[type].map(r => sanitizeRecord(r, type));
+                            }
+                        });
+                    }
+                    if (parsed.tierSettings) tierSettings = { ...tierSettings, ...parsed.tierSettings };
+                } catch (e) {
+                    console.error('LocalStorage parse error:', e);
+                }
             }
             updateBadges();
         }
 
-        function saveData() {
+        async function loadFromDataFolder() {
+            const files = ['config.json', 'electricity.json', 'water.json', 'gas.json'];
+            let loaded = false;
+            let loadedCounts = {};
+
+            // 首先尝试加载合并的配置文件
+            try {
+                const response = await fetch(`data/config.json`);
+                if (response.ok) {
+                    const data = await response.json();
+
+                    // 检查是否是合并的格式（包含data和tierSettings）
+                    if (data.data && data.tierSettings) {
+                        // 新版合并格式
+                        Object.keys(data.data).forEach(type => {
+                            if (allData[type] && Array.isArray(data.data[type])) {
+                                const existingDates = new Set(allData[type].map(r => r.date));
+                                const newData = data.data[type]
+                                    .filter(r => !existingDates.has(r.date))
+                                    .map(r => sanitizeRecord(r, type));
+                                allData[type] = [...allData[type], ...newData].sort((a, b) => a.date.localeCompare(b.date));
+                                loadedCounts[type] = newData.length;
+                                if (newData.length > 0) loaded = true;
+                            }
+                        });
+
+                        if (data.tierSettings) {
+                            tierSettings = { ...tierSettings, ...data.tierSettings };
+                        }
+
+                        // 如果成功加载合并配置，跳过其他文件
+                        if (loaded) {
+                            saveToLocalStorage();
+                            const totalNew = Object.values(loadedCounts).reduce((a, b) => a + b, 0);
+                            showToast(`已同步 ${totalNew} 条新记录`);
+                            updateUI();
+                            updateBadges();
+                            return;
+                        }
+                    } else if (data.tierSettings) {
+                        // 只有阶梯设置的config.json
+                        tierSettings = { ...tierSettings, ...data.tierSettings };
+                    }
+                }
+            } catch (error) {
+                console.log('Failed to load config.json:', error);
+            }
+
+            // 如果合并配置不存在或没有数据，尝试加载分开的文件
+            for (let file of files) {
+                if (file === 'config.json') continue; // 已经处理过了
+
+                try {
+                    const response = await fetch(`data/${file}`);
+                    if (response.ok) {
+                        const data = await response.json();
+
+                        const type = file.replace('.json', '');
+                        if (allData[type] && Array.isArray(data)) {
+                            const existingDates = new Set(allData[type].map(r => r.date));
+                            // 清洗并映射新数据
+                            const newData = data
+                                .filter(r => !existingDates.has(r.date))
+                                .map(r => sanitizeRecord(r, type));
+                            allData[type] = [...allData[type], ...newData].sort((a, b) => a.date.localeCompare(b.date));
+                            loadedCounts[type] = newData.length;
+                            if (newData.length > 0) loaded = true;
+                        }
+                    }
+                } catch (error) {
+                    console.log(`Failed to load ${file}:`, error);
+                }
+            }
+
+            if (loaded) {
+                saveToLocalStorage();
+                const totalNew = Object.values(loadedCounts).reduce((a, b) => a + b, 0);
+                showToast(`已同步 ${totalNew} 条新记录`);
+            }
+
+            updateUI();
+            updateBadges();
+        }
+
+        function syncFromDataFolder() {
+            showToast('正在同步...');
+            loadFromDataFolder();
+        }
+
+        function saveToLocalStorage() {
             localStorage.setItem('utilityData', JSON.stringify({
                 data: allData,
                 tierSettings: tierSettings,
@@ -412,17 +621,17 @@
             updateBadges();
         }
 
-        function loadTierSettings() {
-            // Already loaded in loadData
-        }
-
         function updateBadges() {
             ['electricity', 'water', 'gas'].forEach(type => {
                 const count = allData[type].length;
                 const badge = document.getElementById(`badge-${type}`);
-                if (count > 0) {
-                    badge.textContent = count;
-                    badge.classList.remove('hidden');
+                if (badge) {
+                    if (count > 0) {
+                        badge.textContent = count;
+                        badge.classList.remove('hidden');
+                    } else {
+                        badge.classList.add('hidden');
+                    }
                 }
             });
         }
@@ -431,7 +640,6 @@
         function switchType(type) {
             currentType = type;
             
-            // Update tabs
             ['electricity', 'water', 'gas'].forEach(t => {
                 const tab = document.getElementById(`tab-${t}`);
                 const config = TYPE_CONFIG[t];
@@ -443,7 +651,6 @@
                 }
             });
 
-            // Update nav color
             const nav = document.querySelector('nav');
             nav.className = nav.className.replace(/(gradient-bg|water-gradient|gas-gradient)/, '');
             if (type === 'water') nav.classList.add('water-gradient');
@@ -455,21 +662,17 @@
 
         function updateUI() {
             const config = TYPE_CONFIG[currentType];
+            if (!config) return;
             
-            // Update labels
             document.getElementById('stat-label-1').textContent = `本年度${config.name}`;
             document.getElementById('stat-label-2').textContent = `本年度用量`;
             document.getElementById('usageLabel').textContent = `用量 (${config.unit})`;
             document.getElementById('metricLabelUsage').textContent = `用量 (${config.unit})`;
             document.getElementById('chartTitle').textContent = `${config.name}年度对比`;
             
-            // Update tier settings UI
             updateTierSettingsUI();
-            
-            // Update stats colors
             updateStatColors(config.color);
             
-            // Refresh displays
             renderRecentList();
             updateStats();
             
@@ -485,14 +688,18 @@
             };
             const theme = colors[color] || colors.indigo;
             
-            document.getElementById('stat-card-1').className = `bg-white rounded-xl shadow-sm p-5 border-l-4 ${theme.split(' ')[0]}`;
-            document.getElementById('stat-card-2').className = `bg-white rounded-xl shadow-sm p-5 border-l-4 ${theme.split(' ')[0]}`;
+            const card1 = document.getElementById('stat-card-1');
+            const card2 = document.getElementById('stat-card-2');
+            if (card1) card1.className = `bg-white rounded-xl shadow-sm p-5 border-l-4 ${theme.split(' ')[0]}`;
+            if (card2) card2.className = `bg-white rounded-xl shadow-sm p-5 border-l-4 ${theme.split(' ')[0]}`;
         }
 
         function updateTierSettingsUI() {
             const container = document.getElementById('tier-settings-container');
             const settings = tierSettings[currentType];
             const config = TYPE_CONFIG[currentType];
+            
+            if (!container || !settings || !config) return;
             
             container.innerHTML = `
                 <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
@@ -534,7 +741,7 @@
                 tier1: parseInt(tier1) || 0,
                 tier2: parseInt(tier2) || 0
             };
-            saveData();
+            saveToLocalStorage();
             updateTierSettingsUI();
             updateCurrentTierDisplay();
             if (currentView === 'tier') updateTierView();
@@ -542,9 +749,23 @@
         }
 
         // Data Management
-        function addRecord(date, usage, cost) {
+        function addRecord(date, usage, cost, skipSave = false) {
+            const parsedUsage = parseFloat(usage);
+            const parsedCost = parseFloat(cost);
+            
+            if (!date || isNaN(parsedUsage) || isNaN(parsedCost)) {
+                console.error('Invalid data:', { date, usage, cost });
+                return false;
+            }
+            
             const existingIndex = allData[currentType].findIndex(r => r.date === date);
-            const record = { date, usage: parseFloat(usage), cost: parseFloat(cost), timestamp: new Date().toISOString() };
+            const record = { 
+                date, 
+                usage: parsedUsage, 
+                cost: parsedCost, 
+                timestamp: new Date().toISOString(),
+                source: 'manual'
+            };
             
             if (existingIndex >= 0) {
                 allData[currentType][existingIndex] = record;
@@ -553,18 +774,22 @@
             }
             
             allData[currentType].sort((a, b) => a.date.localeCompare(b.date));
-            saveData();
-            renderRecentList();
-            updateStats();
-            updateCurrentTierDisplay();
             
-            if (currentView === 'comparison') updateComparisonView();
-            else updateTierView();
+            if (!skipSave) {
+                saveToLocalStorage();
+                renderRecentList();
+                updateStats();
+                updateCurrentTierDisplay();
+                
+                if (currentView === 'comparison') updateComparisonView();
+                else updateTierView();
+            }
+            return true;
         }
 
         function deleteRecord(date) {
             allData[currentType] = allData[currentType].filter(r => r.date !== date);
-            saveData();
+            saveToLocalStorage();
             renderRecentList();
             updateStats();
             updateCurrentTierDisplay();
@@ -630,7 +855,9 @@
             const datasets = years.map((year, index) => {
                 const data = months.map((_, m) => {
                     const record = allData[currentType].find(r => r.date === `${year}-${String(m+1).padStart(2,'0')}`);
-                    return record ? (currentMetric === 'usage' ? record.usage : record.cost) : null;
+                    if (!record) return null;
+                    const value = currentMetric === 'usage' ? record.usage : record.cost;
+                    return (typeof value === 'number' && !isNaN(value)) ? value : null;
                 });
                 
                 return {
@@ -643,7 +870,8 @@
                     pointHoverRadius: 7,
                     tension: 0.3,
                     fill: false,
-                    hidden: !visibleYears.has(year)
+                    hidden: !visibleYears.has(year),
+                    spanGaps: false
                 };
             });
             
@@ -661,8 +889,13 @@
                                 label: function(context) {
                                     let label = context.dataset.label || '';
                                     if (label) label += ': ';
-                                    label += context.parsed.y !== null ? context.parsed.y.toFixed(2) : '--';
-                                    label += currentMetric === 'usage' ? ` ${config.unit}` : ' 元';
+                                    const value = context.parsed.y;
+                                    if (value === null || value === undefined || isNaN(value)) {
+                                        label += '无数据';
+                                    } else {
+                                        label += value.toFixed(2);
+                                        label += currentMetric === 'usage' ? ` ${config.unit}` : ' 元';
+                                    }
                                     return label;
                                 }
                             }
@@ -675,6 +908,7 @@
                             grid: { color: 'rgba(0,0,0,0.05)' },
                             ticks: {
                                 callback: function(value) {
+                                    if (isNaN(value)) return '';
                                     return value + (currentMetric === 'usage' ? ` ${config.unit}` : ' 元');
                                 }
                             },
@@ -750,7 +984,7 @@
             
             for (let m = 1; m <= 12; m++) {
                 const record = yearData.find(r => parseInt(r.date.split('-')[1]) === m);
-                const value = record ? record.usage : 0;
+                const value = (record && typeof record.usage === 'number' && !isNaN(record.usage)) ? record.usage : 0;
                 cumulative += value;
                 monthlyData.push(value);
                 cumulativeData.push(cumulative);
@@ -834,17 +1068,18 @@
                 let tier1Usage = 0, tier2Usage = 0, tier3Usage = 0;
 
                 yearData.forEach(record => {
+                    const usage = (typeof record.usage === 'number' && !isNaN(record.usage)) ? record.usage : 0;
                     const month = parseInt(record.date.split('-')[1]);
                     const startCum = cumulative;
-                    cumulative += record.usage;
+                    cumulative += usage;
                     
                     if (startCum < settings.tier1) {
                         const remaining = settings.tier1 - startCum;
-                        tier1Usage += Math.min(record.usage, remaining);
-                        const afterTier1 = record.usage - Math.min(record.usage, remaining);
+                        tier1Usage += Math.min(usage, remaining);
+                        const afterTier1 = usage - Math.min(usage, remaining);
                         if (afterTier1 > 0) {
-                            if (startCum + Math.min(record.usage, remaining) < settings.tier2) {
-                                const remaining2 = settings.tier2 - (startCum + Math.min(record.usage, remaining));
+                            if (startCum + Math.min(usage, remaining) < settings.tier2) {
+                                const remaining2 = settings.tier2 - (startCum + Math.min(usage, remaining));
                                 tier2Usage += Math.min(afterTier1, remaining2);
                                 tier3Usage += Math.max(0, afterTier1 - remaining2);
                             } else {
@@ -853,10 +1088,10 @@
                         }
                     } else if (startCum < settings.tier2) {
                         const remaining = settings.tier2 - startCum;
-                        tier2Usage += Math.min(record.usage, remaining);
-                        tier3Usage += Math.max(0, record.usage - remaining);
+                        tier2Usage += Math.min(usage, remaining);
+                        tier3Usage += Math.max(0, usage - remaining);
                     } else {
-                        tier3Usage += record.usage;
+                        tier3Usage += usage;
                     }
 
                     if (!tier1Break && cumulative > settings.tier1) tier1Break = month;
@@ -878,21 +1113,57 @@
         // Stats & Analysis
         function updateStats() {
             const currentYear = new Date().getFullYear();
-            const yearData = allData[currentType].filter(r => r.date.startsWith(currentYear));
-            const yearCost = yearData.reduce((sum, r) => sum + r.cost, 0);
-            const yearUsage = yearData.reduce((sum, r) => sum + r.usage, 0);
+            const yearData = allData[currentType].filter(r => r.date.startsWith(currentYear.toString()));
             
-            document.getElementById('currentYearCost').textContent = `¥${yearCost.toFixed(2)}`;
-            document.getElementById('currentYearUsage').textContent = `${yearUsage.toFixed(1)} ${TYPE_CONFIG[currentType].unit}`;
-            document.getElementById('totalRecords').textContent = allData[currentType].length;
+            const yearCost = yearData.reduce((sum, r) => {
+                const cost = parseFloat(r.cost);
+                return sum + (isNaN(cost) ? 0 : cost);
+            }, 0);
+            
+            const yearUsage = yearData.reduce((sum, r) => {
+                const usage = parseFloat(r.usage);
+                return sum + (isNaN(usage) ? 0 : usage);
+            }, 0);
+            
+            const costEl = document.getElementById('currentYearCost');
+            const usageEl = document.getElementById('currentYearUsage');
+            const totalEl = document.getElementById('totalRecords');
+            
+            if (costEl) costEl.textContent = `¥${yearCost.toFixed(2)}`;
+            if (usageEl) usageEl.textContent = `${yearUsage.toFixed(1)} ${TYPE_CONFIG[currentType].unit}`;
+            if (totalEl) totalEl.textContent = allData[currentType].length;
             
             const lastYear = currentYear - 1;
-            const lastYearData = allData[currentType].filter(r => r.date.startsWith(lastYear));
-            const costDiff = lastYearData.length ? ((yearCost - lastYearData.reduce((s,r)=>s+r.cost,0)) / lastYearData.reduce((s,r)=>s+r.cost,0) * 100).toFixed(1) : 0;
-            const usageDiff = lastYearData.length ? ((yearUsage - lastYearData.reduce((s,r)=>s+r.usage,0)) / lastYearData.reduce((s,r)=>s+r.usage,0) * 100).toFixed(1) : 0;
+            const lastYearData = allData[currentType].filter(r => r.date.startsWith(lastYear.toString()));
             
-            document.getElementById('currentYearCompare').innerHTML = lastYearData.length ? `较去年 <span class="${costDiff > 0 ? 'text-red-500' : 'text-green-500'}">${costDiff > 0 ? '+' : ''}${costDiff}%</span>` : '较去年 --';
-            document.getElementById('currentYearUsageCompare').innerHTML = lastYearData.length ? `较去年 <span class="${usageDiff > 0 ? 'text-red-500' : 'text-green-500'}">${usageDiff > 0 ? '+' : ''}${usageDiff}%</span>` : '较去年 --';
+            if (lastYearData.length > 0) {
+                const lastCost = lastYearData.reduce((sum, r) => {
+                    const cost = parseFloat(r.cost);
+                    return sum + (isNaN(cost) ? 0 : cost);
+                }, 0);
+                const lastUsage = lastYearData.reduce((sum, r) => {
+                    const usage = parseFloat(r.usage);
+                    return sum + (isNaN(usage) ? 0 : usage);
+                }, 0);
+                
+                const costDiff = lastCost > 0 ? ((yearCost - lastCost) / lastCost * 100).toFixed(1) : 0;
+                const usageDiff = lastUsage > 0 ? ((yearUsage - lastUsage) / lastUsage * 100).toFixed(1) : 0;
+                
+                const costCompareEl = document.getElementById('currentYearCompare');
+                const usageCompareEl = document.getElementById('currentYearUsageCompare');
+                
+                if (costCompareEl) {
+                    costCompareEl.innerHTML = `较去年 <span class="${costDiff > 0 ? 'text-red-500' : 'text-green-500'}">${costDiff > 0 ? '+' : ''}${costDiff}%</span>`;
+                }
+                if (usageCompareEl) {
+                    usageCompareEl.innerHTML = `较去年 <span class="${usageDiff > 0 ? 'text-red-500' : 'text-green-500'}">${usageDiff > 0 ? '+' : ''}${usageDiff}%</span>`;
+                }
+            } else {
+                const costCompareEl = document.getElementById('currentYearCompare');
+                const usageCompareEl = document.getElementById('currentYearUsageCompare');
+                if (costCompareEl) costCompareEl.innerHTML = '较去年 --';
+                if (usageCompareEl) usageCompareEl.innerHTML = '较去年 --';
+            }
             
             updateCurrentTierDisplay();
         }
@@ -900,8 +1171,14 @@
         function updateCurrentTierDisplay() {
             const currentYear = new Date().getFullYear().toString();
             const yearData = allData[currentType].filter(r => r.date.startsWith(currentYear));
-            const totalUsage = yearData.reduce((sum, r) => sum + r.usage, 0);
+            
+            const totalUsage = yearData.reduce((sum, r) => {
+                const usage = parseFloat(r.usage);
+                return sum + (isNaN(usage) ? 0 : usage);
+            }, 0);
+            
             const settings = tierSettings[currentType];
+            if (!settings) return;
             
             let tier = 1;
             if (totalUsage > settings.tier2) tier = 3;
@@ -910,9 +1187,16 @@
             const tierNames = ['', '第一阶梯', '第二阶梯', '第三阶梯'];
             const tierColors = ['', 'text-green-600', 'text-yellow-600', 'text-red-600'];
             
-            document.getElementById('currentTier').textContent = tierNames[tier];
-            document.getElementById('currentTier').className = `text-2xl font-bold mt-1 ${tierColors[tier]}`;
-            document.getElementById('currentTierInfo').textContent = `本年累计 ${totalUsage.toFixed(1)} ${TYPE_CONFIG[currentType].unit}`;
+            const tierEl = document.getElementById('currentTier');
+            const infoEl = document.getElementById('currentTierInfo');
+            
+            if (tierEl) {
+                tierEl.textContent = tierNames[tier] || '--';
+                tierEl.className = `text-2xl font-bold mt-1 ${tierColors[tier] || 'text-gray-600'}`;
+            }
+            if (infoEl) {
+                infoEl.textContent = `本年累计 ${totalUsage.toFixed(1)} ${TYPE_CONFIG[currentType].unit}`;
+            }
         }
 
         function updateAnalysis() {
@@ -920,29 +1204,354 @@
             const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
             
             allData[currentType].forEach(r => {
+                if (!r.date) return;
                 const month = parseInt(r.date.split('-')[1]) - 1;
+                if (isNaN(month)) return;
+                
+                const usage = parseFloat(r.usage);
+                if (isNaN(usage)) return;
+                
                 if (!monthStats[month]) monthStats[month] = [];
-                monthStats[month].push(r.usage);
+                monthStats[month].push(usage);
             });
             
             const averages = Object.keys(monthStats).map(m => ({
                 month: parseInt(m),
-                avg: monthStats[m].reduce((a,b) => a+b, 0) / monthStats[m].length
+                avg: monthStats[m].reduce((a, b) => a + b, 0) / (monthStats[m].length || 1)
             })).sort((a, b) => b.avg - a.avg);
             
             const peak = averages.slice(0, 3);
             const low = averages.slice(-3).reverse();
             
-            document.getElementById('peakMonths').innerHTML = peak.map(p => `
-                <div class="flex justify-between items-center"><span class="text-sm text-gray-600">${months[p.month]}</span><span class="text-sm font-medium text-gray-900">${p.avg.toFixed(1)}${TYPE_CONFIG[currentType].unit}</span></div>
-            `).join('') || '<p class="text-gray-400 text-sm">数据不足</p>';
+            const peakEl = document.getElementById('peakMonths');
+            const lowEl = document.getElementById('lowMonths');
+            const unit = TYPE_CONFIG[currentType].unit;
             
-            document.getElementById('lowMonths').innerHTML = low.map(l => `
-                <div class="flex justify-between items-center"><span class="text-sm text-gray-600">${months[l.month]}</span><span class="text-sm font-medium text-gray-900">${l.avg.toFixed(1)}${TYPE_CONFIG[currentType].unit}</span></div>
-            `).join('') || '<p class="text-gray-400 text-sm">数据不足</p>';
+            if (peakEl) {
+                peakEl.innerHTML = peak.map(p => `
+                    <div class="flex justify-between items-center"><span class="text-sm text-gray-600">${months[p.month]}</span><span class="text-sm font-medium text-gray-900">${p.avg.toFixed(1)}${unit}</span></div>
+                `).join('') || '<p class="text-gray-400 text-sm">数据不足</p>';
+            }
+            
+            if (lowEl) {
+                lowEl.innerHTML = low.map(l => `
+                    <div class="flex justify-between items-center"><span class="text-sm text-gray-600">${months[l.month]}</span><span class="text-sm font-medium text-gray-900">${l.avg.toFixed(1)}${unit}</span></div>
+                `).join('') || '<p class="text-gray-400 text-sm">数据不足</p>';
+            }
         }
 
-        // Import/Export
+        // OCR Functions (保持之前实现)
+        let isProcessing = false;
+        
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('batchDropZone');
+            if (!dropZone) return;
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.add('drag-active'), false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => dropZone.classList.remove('drag-active'), false);
+            });
+            
+            dropZone.addEventListener('drop', handleDrop, false);
+            dropZone.addEventListener('click', () => {
+                const input = document.getElementById('batchImageInput');
+                if (input) input.click();
+            });
+        }
+        
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            handleFiles(files);
+        }
+        
+        function handleBatchUpload(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+        
+        function handleFiles(files) {
+            if (isProcessing) return;
+            
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+            if (imageFiles.length === 0) {
+                showToast('请选择图片文件');
+                return;
+            }
+            
+            processImages(imageFiles);
+        }
+        
+        async function processImages(files) {
+            isProcessing = true;
+            ocrResultsBuffer = [];
+            
+            const progressDiv = document.getElementById('batchProgress');
+            const progressBar = document.getElementById('batchProgressBar');
+            const progressText = document.getElementById('batchPercent');
+            const statusText = document.getElementById('batchStatus');
+            const scanningEffect = document.getElementById('scanningEffect');
+            const uploadPrompt = document.getElementById('uploadPrompt');
+            
+            if (progressDiv) progressDiv.classList.remove('hidden');
+            if (scanningEffect) scanningEffect.classList.remove('hidden');
+            if (uploadPrompt) uploadPrompt.classList.add('opacity-50');
+            
+            try {
+                const typePriority = [currentType, ...['electricity', 'water', 'gas'].filter(t => t !== currentType)];
+                
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    if (statusText) statusText.textContent = `正在识别 ${file.name} (${i+1}/${files.length})...`;
+                    
+                    try {
+                        const result = await recognizeImage(file, typePriority);
+                        if (result && result.usage && result.cost) {
+                            ocrResultsBuffer.push(result);
+                        }
+                    } catch (err) {
+                        console.error('OCR Error:', err);
+                    }
+                    
+                    const percent = Math.round(((i + 1) / files.length) * 100);
+                    if (progressBar) progressBar.style.width = `${percent}%`;
+                    if (progressText) progressText.textContent = `${percent}%`;
+                }
+                
+                if (statusText) statusText.textContent = `识别完成，成功 ${ocrResultsBuffer.length} 条`;
+                showOCRResults();
+                
+            } catch (error) {
+                showToast('识别过程出错: ' + error.message);
+            } finally {
+                isProcessing = false;
+                if (scanningEffect) scanningEffect.classList.add('hidden');
+                if (uploadPrompt) uploadPrompt.classList.remove('opacity-50');
+                const input = document.getElementById('batchImageInput');
+                if (input) input.value = '';
+            }
+        }
+        
+        async function recognizeImage(file, typePriority) {
+            const imageUrl = URL.createObjectURL(file);
+            
+            try {
+                const result = await Tesseract.recognize(
+                    imageUrl,
+                    'chi_sim+eng',
+                    {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                console.log(`${Math.round(m.progress * 100)}%`);
+                            }
+                        }
+                    }
+                );
+                
+                const text = result.data.text;
+                
+                for (const type of typePriority) {
+                    const parsed = parseBillText(text, type);
+                    if (parsed && parsed.usage && parsed.cost) {
+                        parsed.type = type;
+                        parsed.source = 'ocr';
+                        return parsed;
+                    }
+                }
+                
+                const generic = parseGenericBill(text);
+                if (generic) {
+                    generic.type = currentType;
+                    generic.source = 'ocr';
+                    return generic;
+                }
+                
+                return null;
+                
+            } finally {
+                URL.revokeObjectURL(imageUrl);
+            }
+        }
+        
+        function parseBillText(text, type) {
+            const config = TYPE_CONFIG[type];
+            
+            let usage = null;
+            let cost = null;
+            let date = null;
+            
+            // 尝试匹配用量（度/吨/立方等）
+            const usagePatterns = [
+                /(\d+\.?\d*)\s*度/i,
+                /(\d+\.?\d*)\s*kwh/i,
+                /(\d+\.?\d*)\s*吨/i,
+                /(\d+\.?\d*)\s*立方/i,
+                /(\d+\.?\d*)\s*m³/i,
+                /电量[:\s]*(\d+\.?\d*)/i,
+                /用水[:\s]*(\d+\.?\d*)/i,
+                /用气[:\s]*(\d+\.?\d*)/i
+            ];
+            
+            for (let pattern of usagePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    const val = parseFloat(match[1]);
+                    if (!isNaN(val) && val > 0) {
+                        usage = val;
+                        break;
+                    }
+                }
+            }
+            
+            // 尝试匹配金额
+            const costPatterns = [
+                /金额[:\s]*[¥￥]?(\d+\.?\d*)/i,
+                /合计[:\s]*[¥￥]?(\d+\.?\d*)/i,
+                /应缴[:\s]*[¥￥]?(\d+\.?\d*)/i,
+                /[¥￥]\s*(\d+\.?\d*)\s*元/,
+                /(\d+\.?\d*)\s*元/
+            ];
+            
+            for (let pattern of costPatterns) {
+                const match = text.match(pattern);
+                if (match && match[1]) {
+                    const val = parseFloat(match[1]);
+                    if (!isNaN(val) && val > 0) {
+                        cost = val;
+                        break;
+                    }
+                }
+            }
+            
+            // 日期匹配
+            const datePatterns = [
+                /(\d{4})[年/-](\d{1,2})[月/-](\d{1,2})/,
+                /(\d{4})-(\d{2})-\d{2}/,
+                /(\d{4})年(\d{1,2})月/
+            ];
+            
+            for (let pattern of datePatterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    const year = match[1];
+                    const month = match[2].padStart(2, '0');
+                    date = `${year}-${month}`;
+                    break;
+                }
+            }
+            
+            if (!date) {
+                const now = new Date();
+                now.setMonth(now.getMonth() - 1);
+                date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            }
+            
+            if (usage && cost) {
+                return { date, usage, cost, type };
+            }
+            
+            return null;
+        }
+        
+        function parseGenericBill(text) {
+            const usageMatch = text.match(/(\d+\.?\d*)\s*(度|吨|立方米|m³)/i);
+            const costMatch = text.match(/[¥￥]\s*(\d+\.?\d*)/);
+            
+            if (usageMatch && costMatch) {
+                const now = new Date();
+                now.setMonth(now.getMonth() - 1);
+                return {
+                    date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+                    usage: parseFloat(usageMatch[1]),
+                    cost: parseFloat(costMatch[1])
+                };
+            }
+            
+            return null;
+        }
+        
+        function showOCRResults() {
+            const container = document.getElementById('ocrResults');
+            const list = document.getElementById('ocrResultsList');
+            const count = document.getElementById('ocrCount');
+            
+            if (ocrResultsBuffer.length === 0) {
+                showToast('未能识别出有效账单信息');
+                return;
+            }
+            
+            if (count) count.textContent = ocrResultsBuffer.length;
+            if (container) container.classList.remove('hidden');
+            
+            if (list) {
+                list.innerHTML = ocrResultsBuffer.map((result, index) => {
+                    const config = TYPE_CONFIG[result.type];
+                    return `
+                        <div class="ocr-result-item flex justify-between items-center">
+                            <div>
+                                <div class="font-medium text-gray-800">
+                                    ${result.date} 
+                                    <span class="text-xs bg-${config.color}-100 text-${config.color}-600 px-1.5 py-0.5 rounded ml-1">${config.name}</span>
+                                </div>
+                                <div class="text-sm text-gray-600 mt-1">
+                                    ${result.usage} ${config.unit} · ¥${result.cost}
+                                </div>
+                            </div>
+                            <button onclick="removeOCRResult(${index})" class="text-red-400 hover:text-red-600">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        function removeOCRResult(index) {
+            ocrResultsBuffer.splice(index, 1);
+            if (ocrResultsBuffer.length === 0) {
+                const container = document.getElementById('ocrResults');
+                if (container) container.classList.add('hidden');
+            } else {
+                showOCRResults();
+            }
+        }
+        
+        function confirmOCRResults() {
+            let added = 0;
+            const originalType = currentType;
+            
+            ocrResultsBuffer.forEach(result => {
+                if (result.type && allData[result.type]) {
+                    currentType = result.type;
+                    if (addRecord(result.date, result.usage, result.cost)) {
+                        added++;
+                    }
+                }
+            });
+            
+            currentType = originalType;
+            
+            const container = document.getElementById('ocrResults');
+            if (container) container.classList.add('hidden');
+            ocrResultsBuffer = [];
+            
+            updateUI();
+            showToast(`成功导入 ${added} 条记录`);
+        }
+
+        // Import/Export - 关键修复：支持多种字段名格式
         function exportAllData() {
             const dataStr = JSON.stringify({
                 version: '2.0',
@@ -970,37 +1579,62 @@
                     const data = JSON.parse(content);
                     
                     if (data.version && data.data) {
-                        // 新版格式（全部数据）
-                        allData = { ...allData, ...data.data };
+                        // 新版本格式（全量数据）
+                        Object.keys(data.data).forEach(type => {
+                            if (allData[type] && Array.isArray(data.data[type])) {
+                                allData[type] = data.data[type].map(r => sanitizeRecord(r, type));
+                            }
+                        });
                         if (data.tierSettings) tierSettings = { ...tierSettings, ...data.tierSettings };
-                        saveData();
+                        saveToLocalStorage();
                         
                         const totalCount = Object.values(allData).reduce((sum, arr) => sum + arr.length, 0);
                         showToast(`成功恢复 ${totalCount} 条记录（含水电燃）`);
                     } else if (Array.isArray(data)) {
-                        // 旧版格式（仅当前类型）
-                        allData[currentType] = data;
-                        saveData();
-                        showToast(`成功导入 ${data.length} 条${TYPE_CONFIG[currentType].name}记录`);
+                        // 旧版格式（单类型数组）
+                        // 自动检测数据类型：如果包含kwh则为电费，包含吨则为水费等
+                        const detectedType = detectDataType(data);
+                        allData[detectedType] = data.map(r => sanitizeRecord(r, detectedType));
+                        saveToLocalStorage();
+                        showToast(`成功导入 ${data.length} 条${TYPE_CONFIG[detectedType].name}记录`);
                     }
                     
                     updateUI();
                     updateBadges();
                 } catch (err) {
-                    showToast('文件解析失败');
+                    showToast('文件解析失败: ' + err.message);
                 }
             };
             reader.readAsText(file);
+        }
+        
+        // 检测导入数据的类型（根据字段名）
+        function detectDataType(data) {
+            if (!Array.isArray(data) || data.length === 0) return currentType;
+            
+            const sample = data[0];
+            const fields = Object.keys(sample).map(f => f.toLowerCase());
+            
+            // 检查特定字段
+            if (fields.some(f => ['kwh', 'degree', 'electricity', '用电'].includes(f))) return 'electricity';
+            if (fields.some(f => ['ton', 'water', '用水', '吨'].includes(f))) return 'water';
+            if (fields.some(f => ['gas', 'cube', '用气', '燃气'].includes(f))) return 'gas';
+            
+            // 默认根据当前类型
+            return currentType;
         }
 
         // UI Helpers
         function renderRecentList() {
             const container = document.getElementById('recentList');
+            if (!container) return;
+            
             const data = allData[currentType];
             if (data.length === 0) {
                 container.innerHTML = '<p class="text-gray-400 text-center py-4">暂无记录</p>';
                 return;
             }
+            
             const reversed = [...data].reverse();
             container.innerHTML = reversed.slice(0, 10).map(record => `
                 <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition group">
@@ -1014,35 +1648,41 @@
 
         function showToast(msg) {
             const toast = document.getElementById('toast');
-            document.getElementById('toastMsg').textContent = msg;
-            toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+            const msgEl = document.getElementById('toastMsg');
+            if (toast && msgEl) {
+                msgEl.textContent = msg;
+                toast.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => toast.classList.add('translate-y-20', 'opacity-0'), 3000);
+            }
         }
 
         function setupEventListeners() {
-            // Form submission
-            document.getElementById('entryForm').addEventListener('submit', (e) => {
-                e.preventDefault();
-                const date = document.getElementById('entryDate').value;
-                const usage = parseFloat(document.getElementById('entryUsage').value);
-                const cost = parseFloat(document.getElementById('entryCost').value);
-                
-                if (date && !isNaN(usage) && !isNaN(cost)) {
-                    addRecord(date, usage, cost);
-                    e.target.reset();
-                    document.getElementById('entryDate').value = date;
-                    showToast('添加成功');
-                }
-            });
+            const form = document.getElementById('entryForm');
+            if (form) {
+                form.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const date = document.getElementById('entryDate').value;
+                    const usage = parseFloat(document.getElementById('entryUsage').value);
+                    const cost = parseFloat(document.getElementById('entryCost').value);
+                    
+                    if (date && !isNaN(usage) && !isNaN(cost)) {
+                        if (addRecord(date, usage, cost)) {
+                            form.reset();
+                            const dateInput = document.getElementById('entryDate');
+                            if (dateInput) dateInput.value = date;
+                            showToast('添加成功');
+                        }
+                    } else {
+                        showToast('请输入有效数值');
+                    }
+                });
+            }
 
-            // Date default
             const now = new Date();
-            document.getElementById('entryDate').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-        }
-
-        // OCR Placeholder (simplified)
-        function handleBatchUpload(e) {
-            showToast('AI识别功能开发中，请使用手动添加');
+            const dateInput = document.getElementById('entryDate');
+            if (dateInput) {
+                dateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            }
         }
     </script>
 </body>
