@@ -28,6 +28,7 @@
         .year-toggle { transition: all 0.2s; }
         .year-toggle:hover { transform: translateY(-1px); }
         .year-toggle.inactive { opacity: 0.4; background-color: #e5e7eb !important; color: #9ca3af !important; }
+        .year-toggle.active { ring: 2px; ring-offset: 2px; }
         .tier-badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 9999px; font-size: 0.75rem; font-weight: 600; margin-left: 8px; }
         .tier-1 { background-color: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
         .tier-2 { background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; }
@@ -36,6 +37,23 @@
         .type-tab { transition: all 0.3s ease; position: relative; overflow: hidden; }
         .type-tab.active { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
         .type-tab.active::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.5); }
+        
+        .metric-toggle { transition: all 0.2s; }
+        .metric-toggle.active { background-color: white; color: #374151; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-weight: 600; }
+        
+        /* 双月计费提示样式 */
+        .billing-cycle-badge { 
+            display: inline-flex; 
+            align-items: center; 
+            padding: 2px 8px; 
+            border-radius: 9999px; 
+            font-size: 0.75rem; 
+            font-weight: 500; 
+            margin-left: 8px;
+            background-color: #fef3c7;
+            color: #92400e;
+            border: 1px solid #fde68a;
+        }
         
         .ocr-preview { max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.875rem; background: #f3f4f6; padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.5rem; }
         .ocr-result-item { padding: 0.5rem; margin: 0.25rem 0; background: white; border-radius: 0.375rem; border-left: 3px solid #667eea; }
@@ -263,10 +281,17 @@
 
                 <!-- Chart Card -->
                 <div class="bg-white rounded-xl shadow-sm p-6 fade-in">
+                    <!-- Comparison Controls -->
                     <div id="comparisonControls" class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                         <div>
-                            <h3 class="text-lg font-semibold text-gray-800" id="chartTitle">年度对比分析</h3>
-                            <p class="text-sm text-gray-500 mt-1">横轴：月份 | 纵轴：用量/费用</p>
+                            <h3 class="text-lg font-semibold text-gray-800 flex items-center" id="chartTitleContainer">
+                                <span id="chartTitle">年度对比分析</span>
+                                <!-- 双月计费标识 -->
+                                <span id="billingCycleBadge" class="billing-cycle-badge hidden">
+                                    <i class="fas fa-calendar-alt mr-1"></i>双月计费
+                                </span>
+                            </h3>
+                            <p class="text-sm text-gray-500 mt-1" id="chartSubtitle">横轴：月份 | 纵轴：用量/费用</p>
                         </div>
                         <div class="flex bg-gray-100 rounded-lg p-1">
                             <button onclick="switchMetric('usage')" id="btnUsage" class="metric-btn active px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 bg-gray-800 text-white shadow-md">
@@ -280,12 +305,25 @@
                         </div>
                     </div>
 
-                    <div id="tierControls" class="hidden flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                        <div>
-                            <h3 class="text-lg font-semibold text-gray-800">阶梯累计分析</h3>
-                            <p class="text-sm text-gray-500 mt-1">横轴：月份 | 纵轴：累计用量</p>
+                    <!-- Tier Controls -->
+                    <div id="tierControls" class="hidden flex flex-col gap-4 mb-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-gray-800">阶梯累计分析</h3>
+                                <p class="text-sm text-gray-500 mt-1" id="tierSubtitle">横轴：月份 | 纵轴：累计用量</p>
+                            </div>
+                            <div class="flex bg-gray-100 rounded-lg p-1">
+                                <button onclick="switchTierMetric('usage')" id="btnTierUsage" class="metric-toggle active px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 text-gray-700">
+                                    <i class="fas fa-tachometer-alt"></i>
+                                    <span>累计用量</span>
+                                </button>
+                                <button onclick="switchTierMetric('cost')" id="btnTierCost" class="metric-toggle px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 text-gray-600 hover:text-gray-800">
+                                    <i class="fas fa-yen-sign"></i>
+                                    <span>累计费用</span>
+                                </button>
+                            </div>
                         </div>
-                        <select id="tierYearSelect" onchange="changeTierYear(this.value)" class="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-gray-500 focus:border-gray-500"></select>
+                        <div id="tierYearToggles" class="flex flex-wrap gap-2"></div>
                     </div>
 
                     <div id="yearToggles" class="mb-4 flex flex-wrap gap-2"></div>
@@ -352,7 +390,7 @@
     </div>
 
     <script>
-        // Configuration
+        // Configuration - 添加 billingCycle 标识计费周期
         const TYPE_CONFIG = {
             electricity: {
                 name: '电费',
@@ -361,6 +399,7 @@
                 color: 'indigo',
                 gradient: 'from-indigo-500 to-purple-600',
                 tierDefaults: { tier1: 260, tier2: 600 },
+                billingCycle: 'monthly', // 单月计费
                 usageFields: ['kwh', 'usage', 'amount', 'quantity', 'degree', 'degrees', '电量', '用电'],
                 costFields: ['cost', 'fee', 'price', 'amount', 'total', '费用', '金额', '价格']
             },
@@ -371,6 +410,7 @@
                 color: 'blue',
                 gradient: 'from-blue-500 to-cyan-600',
                 tierDefaults: { tier1: 180, tier2: 260 },
+                billingCycle: 'bimonthly', // 双月计费
                 usageFields: ['usage', 'amount', 'quantity', 'ton', 'tons', '立方', '用水', '水量'],
                 costFields: ['cost', 'fee', 'price', 'amount', 'total', '费用', '金额']
             },
@@ -381,6 +421,7 @@
                 color: 'orange',
                 gradient: 'from-orange-500 to-red-600',
                 tierDefaults: { tier1: 300, tier2: 600 },
+                billingCycle: 'bimonthly', // 双月计费
                 usageFields: ['usage', 'amount', 'quantity', 'cube', 'm3', 'm³', '立方', '用气', '气量'],
                 costFields: ['cost', 'fee', 'price', 'amount', 'total', '费用', '金额']
             }
@@ -390,12 +431,12 @@
         let currentType = 'electricity';
         let currentView = 'comparison';
         let currentMetric = 'usage';
+        let currentTierMetric = 'usage';
         let currentChart = null;
         let visibleYears = new Set();
         let selectedTierYear = new Date().getFullYear().toString();
         let ocrResultsBuffer = [];
 
-        // Data Structure
         let allData = {
             electricity: [],
             water: [],
@@ -408,12 +449,10 @@
             gas: { tier1: 300, tier2: 600 }
         };
 
-        // 智能字段识别函数 - 自动查找用量和费用字段
         function detectFields(record, type) {
             const config = TYPE_CONFIG[type];
             const fields = Object.keys(record);
             
-            // 查找用量字段（按优先级）
             let usageField = null;
             for (let field of config.usageFields) {
                 if (fields.includes(field) && record[field] !== undefined && record[field] !== null) {
@@ -421,19 +460,16 @@
                     break;
                 }
             }
-            // 如果没找到，尝试查找数字类型的字段（排除date、timestamp等）
             if (!usageField) {
                 for (let field of fields) {
                     if (['date', 'timestamp', 'source', 'type'].includes(field)) continue;
                     if (typeof record[field] === 'number' || !isNaN(parseFloat(record[field]))) {
-                        // 如果找到另一个可能是费用的字段（值较小），则当前是用量
                         usageField = field;
                         break;
                     }
                 }
             }
             
-            // 查找费用字段（按优先级）
             let costField = null;
             for (let field of config.costFields) {
                 if (fields.includes(field) && record[field] !== undefined && record[field] !== null) {
@@ -445,17 +481,13 @@
             return { usageField, costField };
         }
 
-        // 数据清洗和字段映射函数
         function sanitizeRecord(record, type = currentType) {
-            // 自动识别字段
             const { usageField, costField } = detectFields(record, type);
             
-            // 提取用量（尝试所有可能的字段名）
             let usage = 0;
             if (usageField && record[usageField] !== undefined) {
                 usage = parseFloat(record[usageField]);
             } else {
-                // 备用：尝试常见变体
                 usage = parseFloat(
                     record.usage ?? 
                     record.kwh ?? 
@@ -469,7 +501,6 @@
                 );
             }
             
-            // 提取费用
             let cost = 0;
             if (costField && record[costField] !== undefined) {
                 cost = parseFloat(record[costField]);
@@ -491,11 +522,10 @@
                 cost: isNaN(cost) ? 0 : cost,
                 timestamp: record.timestamp || new Date().toISOString(),
                 source: record.source || 'import',
-                _originalFields: { usageField, costField } // 调试用
+                _originalFields: { usageField, costField }
             };
         }
 
-        // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             loadFromLocalStorage();
             loadFromDataFolder();
@@ -524,88 +554,91 @@
         }
 
         async function loadFromDataFolder() {
-            const files = ['config.json', 'electricity.json', 'water.json', 'gas.json'];
-            let loaded = false;
-            let loadedCounts = {};
-
-            // 首先尝试加载合并的配置文件
-            try {
-                const response = await fetch(`data/config.json`);
-                if (response.ok) {
-                    const data = await response.json();
-
-                    // 检查是否是合并的格式（包含data和tierSettings）
-                    if (data.data && data.tierSettings) {
-                        // 新版合并格式
-                        Object.keys(data.data).forEach(type => {
-                            if (allData[type] && Array.isArray(data.data[type])) {
-                                const existingDates = new Set(allData[type].map(r => r.date));
-                                const newData = data.data[type]
-                                    .filter(r => !existingDates.has(r.date))
-                                    .map(r => sanitizeRecord(r, type));
-                                allData[type] = [...allData[type], ...newData].sort((a, b) => a.date.localeCompare(b.date));
-                                loadedCounts[type] = newData.length;
-                                if (newData.length > 0) loaded = true;
-                            }
-                        });
-
-                        if (data.tierSettings) {
-                            tierSettings = { ...tierSettings, ...data.tierSettings };
-                        }
-
-                        // 如果成功加载合并配置，跳过其他文件
-                        if (loaded) {
-                            saveToLocalStorage();
-                            const totalNew = Object.values(loadedCounts).reduce((a, b) => a + b, 0);
-                            showToast(`已同步 ${totalNew} 条新记录`);
-                            updateUI();
-                            updateBadges();
-                            return;
-                        }
-                    } else if (data.tierSettings) {
-                        // 只有阶梯设置的config.json
+    // 优先尝试读取总文件 data.json（包含所有类型的完整导出格式）
+    try {
+        const response = await fetch('data/data.json');
+        if (response.ok) {
+            const data = await response.json();
+            
+            // 检查是否为完整导出格式（包含 version 和 data 字段）
+            if (data.version && data.data) {
+                let totalNew = 0;
+                
+                // 解析各类型数据
+                Object.keys(data.data).forEach(type => {
+                    if (allData[type] && Array.isArray(data.data[type])) {
+                        const existingDates = new Set(allData[type].map(r => r.date));
+                        const newData = data.data[type]
+                            .filter(r => !existingDates.has(r.date))
+                            .map(r => sanitizeRecord(r, type));
+                        allData[type] = [...allData[type], ...newData].sort((a, b) => a.date.localeCompare(b.date));
+                        totalNew += newData.length;
+                    }
+                });
+                
+                // 加载阶梯设置
+                if (data.tierSettings) {
+                    tierSettings = { ...tierSettings, ...data.tierSettings };
+                }
+                
+                if (totalNew > 0) {
+                    saveToLocalStorage();
+                    showToast(`已同步 ${totalNew} 条新记录`);
+                } else {
+                    showToast('数据已为最新');
+                }
+                
+                updateUI();
+                updateBadges();
+                return; // 成功加载总文件，直接返回
+            }
+        }
+    } catch (error) {
+        console.log('总文件 data.json 不存在，尝试加载分文件...');
+    }
+    
+    // 回退：尝试加载旧版分文件（兼容旧数据）
+    const files = ['electricity.json', 'water.json', 'gas.json', 'config.json'];
+    let loaded = false;
+    let loadedCounts = {};
+    
+    for (let file of files) {
+        try {
+            const response = await fetch(`data/${file}`);
+            if (response.ok) {
+                const data = await response.json();
+                
+                if (file === 'config.json') {
+                    if (data.tierSettings) {
                         tierSettings = { ...tierSettings, ...data.tierSettings };
                     }
-                }
-            } catch (error) {
-                console.log('Failed to load config.json:', error);
-            }
-
-            // 如果合并配置不存在或没有数据，尝试加载分开的文件
-            for (let file of files) {
-                if (file === 'config.json') continue; // 已经处理过了
-
-                try {
-                    const response = await fetch(`data/${file}`);
-                    if (response.ok) {
-                        const data = await response.json();
-
-                        const type = file.replace('.json', '');
-                        if (allData[type] && Array.isArray(data)) {
-                            const existingDates = new Set(allData[type].map(r => r.date));
-                            // 清洗并映射新数据
-                            const newData = data
-                                .filter(r => !existingDates.has(r.date))
-                                .map(r => sanitizeRecord(r, type));
-                            allData[type] = [...allData[type], ...newData].sort((a, b) => a.date.localeCompare(b.date));
-                            loadedCounts[type] = newData.length;
-                            if (newData.length > 0) loaded = true;
-                        }
+                } else {
+                    const type = file.replace('.json', '');
+                    if (allData[type] && Array.isArray(data)) {
+                        const existingDates = new Set(allData[type].map(r => r.date));
+                        const newData = data
+                            .filter(r => !existingDates.has(r.date))
+                            .map(r => sanitizeRecord(r, type));
+                        allData[type] = [...allData[type], ...newData].sort((a, b) => a.date.localeCompare(b.date));
+                        loadedCounts[type] = newData.length;
+                        if (newData.length > 0) loaded = true;
                     }
-                } catch (error) {
-                    console.log(`Failed to load ${file}:`, error);
                 }
             }
-
-            if (loaded) {
-                saveToLocalStorage();
-                const totalNew = Object.values(loadedCounts).reduce((a, b) => a + b, 0);
-                showToast(`已同步 ${totalNew} 条新记录`);
-            }
-
-            updateUI();
-            updateBadges();
+        } catch (error) {
+            console.log(`Failed to load ${file}:`, error);
         }
+    }
+    
+    if (loaded) {
+        saveToLocalStorage();
+        const totalNew = Object.values(loadedCounts).reduce((a, b) => a + b, 0);
+        showToast(`已同步 ${totalNew} 条新记录`);
+    }
+    
+    updateUI();
+    updateBadges();
+}
 
         function syncFromDataFolder() {
             showToast('正在同步...');
@@ -636,7 +669,6 @@
             });
         }
 
-        // Type Switching
         function switchType(type) {
             currentType = type;
             
@@ -669,6 +701,17 @@
             document.getElementById('usageLabel').textContent = `用量 (${config.unit})`;
             document.getElementById('metricLabelUsage').textContent = `用量 (${config.unit})`;
             document.getElementById('chartTitle').textContent = `${config.name}年度对比`;
+            
+            // 显示/隐藏双月计费标识
+            const badge = document.getElementById('billingCycleBadge');
+            const subtitle = document.getElementById('chartSubtitle');
+            if (config.billingCycle === 'bimonthly') {
+                badge.classList.remove('hidden');
+                subtitle.textContent = `横轴：月份 | 纵轴：用量/费用 | 双月计费数据自动连线`;
+            } else {
+                badge.classList.add('hidden');
+                subtitle.textContent = `横轴：月份 | 纵轴：用量/费用`;
+            }
             
             updateTierSettingsUI();
             updateStatColors(config.color);
@@ -748,7 +791,6 @@
             showToast('阶梯设置已更新');
         }
 
-        // Data Management
         function addRecord(date, usage, cost, skipSave = false) {
             const parsedUsage = parseFloat(usage);
             const parsedCost = parseFloat(cost);
@@ -799,7 +841,6 @@
             showToast('删除成功');
         }
 
-        // View Functions
         function switchView(view) {
             currentView = view;
             document.getElementById('viewComparison').className = view === 'comparison' ? 'view-btn active flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center space-x-2 bg-white text-gray-800 shadow-sm' : 'view-btn flex-1 px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center justify-center space-x-2 text-gray-600 hover:bg-white/50';
@@ -833,7 +874,27 @@
             if (currentView === 'comparison') renderComparisonChart();
         }
 
-        // Comparison View
+        function switchTierMetric(metric) {
+            currentTierMetric = metric;
+            const btnUsage = document.getElementById('btnTierUsage');
+            const btnCost = document.getElementById('btnTierCost');
+            const config = TYPE_CONFIG[currentType];
+            
+            if (metric === 'usage') {
+                btnUsage.className = `metric-toggle active px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 text-gray-700 shadow-sm bg-white`;
+                btnCost.className = 'metric-toggle px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 text-gray-600 hover:text-gray-800';
+                document.getElementById('tierSubtitle').textContent = `横轴：月份 | 纵轴：累计用量 (${config.unit})`;
+                document.getElementById('tierLegend').classList.remove('hidden');
+            } else {
+                btnUsage.className = 'metric-toggle px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 text-gray-600 hover:text-gray-800';
+                btnCost.className = `metric-toggle active px-4 py-2 rounded-md text-sm font-medium transition-all flex items-center space-x-2 text-gray-700 shadow-sm bg-white`;
+                document.getElementById('tierSubtitle').textContent = `横轴：月份 | 纵轴：累计费用 (元)`;
+                document.getElementById('tierLegend').classList.add('hidden');
+            }
+            
+            renderTierChart();
+        }
+
         function updateComparisonView() {
             const years = [...new Set(allData[currentType].map(r => r.date.split('-')[0]))].sort();
             if (visibleYears.size === 0 && years.length > 0) {
@@ -844,13 +905,17 @@
             updateAnalysis();
         }
 
+        // 关键修复：支持双月计费的连线
         function renderComparisonChart() {
             if (currentChart) currentChart.destroy();
             const ctx = document.getElementById('mainChart').getContext('2d');
             const years = [...new Set(allData[currentType].map(r => r.date.split('-')[0]))].sort();
             const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
-            const colors = ['#667eea', '#3b82f6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981', '#8b5cf6', '#ec4899'];
+            const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
             const config = TYPE_CONFIG[currentType];
+            
+            // 判断是否为双月计费类型
+            const isBimonthly = config.billingCycle === 'bimonthly';
             
             const datasets = years.map((year, index) => {
                 const data = months.map((_, m) => {
@@ -871,7 +936,10 @@
                     tension: 0.3,
                     fill: false,
                     hidden: !visibleYears.has(year),
-                    spanGaps: false
+                    spanGaps: true, // 关键：跨越空值连线，支持双月计费
+                    // 双月计费类型使用虚线或特殊样式提示
+                    borderDash: isBimonthly ? [5, 5] : [], // 双月计费用虚线表示
+                    pointStyle: isBimonthly ? 'rect' : 'circle' // 双月计费用方形点
                 };
             });
             
@@ -883,9 +951,33 @@
                     maintainAspectRatio: false,
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
-                        legend: { position: 'top', align: 'end', labels: { usePointStyle: true, padding: 20 } },
+                        legend: { 
+                            position: 'top', 
+                            align: 'end', 
+                            labels: { 
+                                usePointStyle: true, 
+                                padding: 20,
+                                generateLabels: function(chart) {
+                                    const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                    // 为双月计费添加说明
+                                    if (isBimonthly) {
+                                        labels.forEach(label => {
+                                            label.text += ' (双月)';
+                                        });
+                                    }
+                                    return labels;
+                                }
+                            } 
+                        },
                         tooltip: {
                             callbacks: {
+                                title: function(context) {
+                                    const title = context[0].label || '';
+                                    if (isBimonthly) {
+                                        return title + ' (双月计费)';
+                                    }
+                                    return title;
+                                },
                                 label: function(context) {
                                     let label = context.dataset.label || '';
                                     if (label) label += ': ';
@@ -895,6 +987,9 @@
                                     } else {
                                         label += value.toFixed(2);
                                         label += currentMetric === 'usage' ? ` ${config.unit}` : ' 元';
+                                        if (isBimonthly && value > 0) {
+                                            label += ' (双月合计)';
+                                        }
                                     }
                                     return label;
                                 }
@@ -902,7 +997,22 @@
                         }
                     },
                     scales: {
-                        x: { grid: { display: false } },
+                        x: { 
+                            grid: { display: false },
+                            ticks: {
+                                callback: function(val, index) {
+                                    // 双月计费类型高亮显示有数据的月份
+                                    if (isBimonthly) {
+                                        // 检查该月份是否有数据
+                                        const monthLabel = this.getLabelForValue(val);
+                                        const monthNum = parseInt(monthLabel);
+                                        // 简单处理：奇数月高亮（假设双月从1月开始）
+                                        // 实际应该根据数据动态判断
+                                    }
+                                    return this.getLabelForValue(val);
+                                }
+                            }
+                        },
                         y: {
                             beginAtZero: true,
                             grid: { color: 'rgba(0,0,0,0.05)' },
@@ -929,7 +1039,7 @@
                 container.innerHTML = '<span class="text-sm text-gray-400">暂无数据</span>';
                 return;
             }
-            const colors = ['#667eea', '#3b82f6', '#06b6d4', '#f59e0b', '#ef4444', '#10b981'];
+            const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
             
             container.innerHTML = years.map((year, index) => {
                 const isVisible = visibleYears.has(year);
@@ -947,23 +1057,36 @@
             updateComparisonView();
         }
 
-        // Tier View
         function updateTierView() {
             const years = [...new Set(allData[currentType].map(r => r.date.split('-')[0]))].sort();
-            const select = document.getElementById('tierYearSelect');
+            
+            const container = document.getElementById('tierYearToggles');
             if (years.length === 0) {
-                select.innerHTML = '<option value="">无数据</option>';
+                container.innerHTML = '<span class="text-sm text-gray-400">暂无数据</span>';
             } else {
-                select.innerHTML = years.map(year => `<option value="${year}" ${year === selectedTierYear ? 'selected' : ''}>${year}年</option>`).join('');
-                if (!years.includes(selectedTierYear)) selectedTierYear = years[0];
+                const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
+                container.innerHTML = years.map((year, index) => {
+                    const isSelected = year === selectedTierYear;
+                    const color = colors[index % colors.length];
+                    return `
+                        <button onclick="changeTierYear('${year}')" class="year-toggle px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all duration-200 ${isSelected ? 'ring-2 ring-offset-1' : 'inactive'}" 
+                            style="${isSelected ? `background-color: ${color}; border-color: ${color}; color: white; --tw-ring-color: ${color}` : ''}">
+                            ${year}年
+                        </button>`;
+                }).join('');
             }
+            
+            if (!years.includes(selectedTierYear) && years.length > 0) {
+                selectedTierYear = years[0];
+            }
+            
             renderTierChart();
             updateTierTable();
         }
 
         function changeTierYear(year) {
             selectedTierYear = year;
-            renderTierChart();
+            updateTierView();
         }
 
         function renderTierChart() {
@@ -978,17 +1101,42 @@
                 return;
             }
 
+            const isUsageMode = currentTierMetric === 'usage';
             let cumulative = 0;
             const monthlyData = [];
             const cumulativeData = [];
             
             for (let m = 1; m <= 12; m++) {
                 const record = yearData.find(r => parseInt(r.date.split('-')[1]) === m);
-                const value = (record && typeof record.usage === 'number' && !isNaN(record.usage)) ? record.usage : 0;
-                cumulative += value;
-                monthlyData.push(value);
+                const value = record ? (isUsageMode ? record.usage : record.cost) : 0;
+                const validValue = (typeof value === 'number' && !isNaN(value)) ? value : 0;
+                cumulative += validValue;
+                monthlyData.push(validValue);
                 cumulativeData.push(cumulative);
             }
+
+            const lineColor = isUsageMode ? '#374151' : '#059669';
+            const fillColor = isUsageMode ? 'rgba(55, 65, 81, 0.1)' : 'rgba(5, 150, 105, 0.1)';
+            const barColors = isUsageMode 
+                ? monthlyData.map((v, i) => {
+                    const cum = cumulativeData[i];
+                    if (cum <= settings.tier1) return 'rgba(34, 197, 94, 0.6)';
+                    if (cum <= settings.tier2) return 'rgba(234, 179, 8, 0.6)';
+                    return 'rgba(239, 68, 68, 0.6)';
+                  })
+                : 'rgba(5, 150, 105, 0.6)';
+            
+            const barBorders = isUsageMode
+                ? monthlyData.map((v, i) => {
+                    const cum = cumulativeData[i];
+                    if (cum <= settings.tier1) return 'rgb(34, 197, 94)';
+                    if (cum <= settings.tier2) return 'rgb(234, 179, 8)';
+                    return 'rgb(239, 68, 68)';
+                  })
+                : 'rgb(5, 150, 105)';
+
+            const unit = isUsageMode ? config.unit : '元';
+            const yAxisTitle = isUsageMode ? `累计用量 (${config.unit})` : '累计费用 (元)';
 
             currentChart = new Chart(ctx, {
                 type: 'line',
@@ -996,10 +1144,10 @@
                     labels: ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'],
                     datasets: [
                         {
-                            label: `累计用量 (${config.unit})`,
+                            label: `累计${isUsageMode ? '用量' : '费用'} (${unit})`,
                             data: cumulativeData,
-                            borderColor: '#374151',
-                            backgroundColor: 'rgba(55, 65, 81, 0.1)',
+                            borderColor: lineColor,
+                            backgroundColor: fillColor,
                             borderWidth: 3,
                             pointRadius: 6,
                             pointHoverRadius: 8,
@@ -1007,21 +1155,11 @@
                             tension: 0.3
                         },
                         {
-                            label: `当月用量 (${config.unit})`,
+                            label: `当月${isUsageMode ? '用量' : '费用'} (${unit})`,
                             data: monthlyData,
                             type: 'bar',
-                            backgroundColor: monthlyData.map((v, i) => {
-                                const cum = cumulativeData[i];
-                                if (cum <= settings.tier1) return 'rgba(34, 197, 94, 0.6)';
-                                if (cum <= settings.tier2) return 'rgba(234, 179, 8, 0.6)';
-                                return 'rgba(239, 68, 68, 0.6)';
-                            }),
-                            borderColor: monthlyData.map((v, i) => {
-                                const cum = cumulativeData[i];
-                                if (cum <= settings.tier1) return 'rgb(34, 197, 94)';
-                                if (cum <= settings.tier2) return 'rgb(234, 179, 8)';
-                                return 'rgb(239, 68, 68)';
-                            }),
+                            backgroundColor: barColors,
+                            borderColor: barBorders,
                             borderWidth: 1,
                             yAxisID: 'y-monthly',
                             barPercentage: 0.5
@@ -1034,17 +1172,54 @@
                     interaction: { mode: 'index', intersect: false },
                     plugins: {
                         legend: { position: 'top', labels: { usePointStyle: true, padding: 20 } },
-                        annotation: {
+                        annotation: isUsageMode ? {
                             annotations: {
-                                line1: { type: 'line', yMin: settings.tier1, yMax: settings.tier1, borderColor: 'rgb(34, 197, 94)', borderWidth: 2, borderDash: [5, 5], label: { content: `一阶上限 (${settings.tier1})`, enabled: true, position: 'end' } },
-                                line2: { type: 'line', yMin: settings.tier2, yMax: settings.tier2, borderColor: 'rgb(234, 179, 8)', borderWidth: 2, borderDash: [5, 5], label: { content: `二阶上限 (${settings.tier2})`, enabled: true, position: 'end' } }
+                                line1: { 
+                                    type: 'line', 
+                                    yMin: settings.tier1, 
+                                    yMax: settings.tier1, 
+                                    borderColor: 'rgb(34, 197, 94)', 
+                                    borderWidth: 2, 
+                                    borderDash: [5, 5], 
+                                    label: { content: `一阶上限 (${settings.tier1})`, enabled: true, position: 'end' } 
+                                },
+                                line2: { 
+                                    type: 'line', 
+                                    yMin: settings.tier2, 
+                                    yMax: settings.tier2, 
+                                    borderColor: 'rgb(234, 179, 8)', 
+                                    borderWidth: 2, 
+                                    borderDash: [5, 5], 
+                                    label: { content: `二阶上限 (${settings.tier2})`, enabled: true, position: 'end' } 
+                                }
                             }
-                        }
+                        } : {}
                     },
                     scales: {
                         x: { grid: { display: false } },
-                        y: { type: 'linear', display: true, position: 'left', title: { display: true, text: `累计用量 (${config.unit})`, color: '#374151', font: { weight: 'bold' } }, grid: { color: 'rgba(0,0,0,0.05)' }, suggestedMax: settings.tier2 * 1.2 },
-                        'y-monthly': { type: 'linear', display: true, position: 'right', title: { display: true, text: `当月用量 (${config.unit})` }, grid: { display: false } }
+                        y: { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'left', 
+                            title: { 
+                                display: true, 
+                                text: yAxisTitle, 
+                                color: lineColor, 
+                                font: { weight: 'bold' } 
+                            }, 
+                            grid: { color: 'rgba(0,0,0,0.05)' },
+                            suggestedMax: isUsageMode ? settings.tier2 * 1.2 : undefined
+                        },
+                        'y-monthly': { 
+                            type: 'linear', 
+                            display: true, 
+                            position: 'right', 
+                            title: { 
+                                display: true, 
+                                text: `当月${isUsageMode ? '用量' : '费用'} (${unit})` 
+                            }, 
+                            grid: { display: false } 
+                        }
                     }
                 }
             });
@@ -1110,7 +1285,6 @@
             }).join('');
         }
 
-        // Stats & Analysis
         function updateStats() {
             const currentYear = new Date().getFullYear();
             const yearData = allData[currentType].filter(r => r.date.startsWith(currentYear.toString()));
@@ -1240,7 +1414,6 @@
             }
         }
 
-        // OCR Functions (保持之前实现)
         let isProcessing = false;
         
         function setupDragAndDrop() {
@@ -1392,7 +1565,6 @@
             let cost = null;
             let date = null;
             
-            // 尝试匹配用量（度/吨/立方等）
             const usagePatterns = [
                 /(\d+\.?\d*)\s*度/i,
                 /(\d+\.?\d*)\s*kwh/i,
@@ -1415,7 +1587,6 @@
                 }
             }
             
-            // 尝试匹配金额
             const costPatterns = [
                 /金额[:\s]*[¥￥]?(\d+\.?\d*)/i,
                 /合计[:\s]*[¥￥]?(\d+\.?\d*)/i,
@@ -1435,7 +1606,6 @@
                 }
             }
             
-            // 日期匹配
             const datePatterns = [
                 /(\d{4})[年/-](\d{1,2})[月/-](\d{1,2})/,
                 /(\d{4})-(\d{2})-\d{2}/,
@@ -1551,7 +1721,6 @@
             showToast(`成功导入 ${added} 条记录`);
         }
 
-        // Import/Export - 关键修复：支持多种字段名格式
         function exportAllData() {
             const dataStr = JSON.stringify({
                 version: '2.0',
@@ -1579,7 +1748,6 @@
                     const data = JSON.parse(content);
                     
                     if (data.version && data.data) {
-                        // 新版本格式（全量数据）
                         Object.keys(data.data).forEach(type => {
                             if (allData[type] && Array.isArray(data.data[type])) {
                                 allData[type] = data.data[type].map(r => sanitizeRecord(r, type));
@@ -1591,8 +1759,6 @@
                         const totalCount = Object.values(allData).reduce((sum, arr) => sum + arr.length, 0);
                         showToast(`成功恢复 ${totalCount} 条记录（含水电燃）`);
                     } else if (Array.isArray(data)) {
-                        // 旧版格式（单类型数组）
-                        // 自动检测数据类型：如果包含kwh则为电费，包含吨则为水费等
                         const detectedType = detectDataType(data);
                         allData[detectedType] = data.map(r => sanitizeRecord(r, detectedType));
                         saveToLocalStorage();
@@ -1608,23 +1774,19 @@
             reader.readAsText(file);
         }
         
-        // 检测导入数据的类型（根据字段名）
         function detectDataType(data) {
             if (!Array.isArray(data) || data.length === 0) return currentType;
             
             const sample = data[0];
             const fields = Object.keys(sample).map(f => f.toLowerCase());
             
-            // 检查特定字段
             if (fields.some(f => ['kwh', 'degree', 'electricity', '用电'].includes(f))) return 'electricity';
             if (fields.some(f => ['ton', 'water', '用水', '吨'].includes(f))) return 'water';
             if (fields.some(f => ['gas', 'cube', '用气', '燃气'].includes(f))) return 'gas';
             
-            // 默认根据当前类型
             return currentType;
         }
 
-        // UI Helpers
         function renderRecentList() {
             const container = document.getElementById('recentList');
             if (!container) return;

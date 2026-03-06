@@ -1,0 +1,642 @@
+{
+  "version": "2.0",
+  "exportDate": "2026-03-06T18:19:08.728Z",
+  "data": {
+    "electricity": [
+      {
+        "date": "2023-10",
+        "usage": 363,
+        "cost": 299.7,
+        "timestamp": "2026-03-05T16:36:00.973Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2023-11",
+        "usage": 400,
+        "cost": 329.6,
+        "timestamp": "2026-03-05T16:35:22.549Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2023-12",
+        "usage": 781,
+        "cost": 626.8,
+        "timestamp": "2026-03-05T16:35:11.148Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-01",
+        "usage": 748,
+        "cost": 380,
+        "timestamp": "2026-03-05T16:34:54.359Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-02",
+        "usage": 762,
+        "cost": 392.7,
+        "timestamp": "2026-03-05T16:34:39.435Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-03",
+        "usage": 558,
+        "cost": 285.3,
+        "timestamp": "2026-03-05T16:34:25.768Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-04",
+        "usage": 368,
+        "cost": 191.8,
+        "timestamp": "2026-03-05T16:34:07.633Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-05",
+        "usage": 376,
+        "cost": 196,
+        "timestamp": "2026-03-05T16:33:46.052Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-06",
+        "usage": 430,
+        "cost": 228.6,
+        "timestamp": "2026-03-05T16:33:36.331Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-07",
+        "usage": 1002,
+        "cost": 565.2,
+        "timestamp": "2026-03-05T16:33:23.335Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-08",
+        "usage": 1130,
+        "cost": 788,
+        "timestamp": "2026-03-05T16:33:13.680Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-09",
+        "usage": 667,
+        "cost": 545.9,
+        "timestamp": "2026-03-05T16:33:03.813Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-10",
+        "usage": 383,
+        "cost": 313.4,
+        "timestamp": "2026-03-05T16:32:51.552Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-11",
+        "usage": 376,
+        "cost": 308.5,
+        "timestamp": "2026-03-05T16:32:24.389Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-12",
+        "usage": 588,
+        "cost": 497.6,
+        "timestamp": "2026-03-05T16:31:59.637Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-01",
+        "usage": 630,
+        "cost": 328.9,
+        "timestamp": "2026-03-05T16:31:36.797Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-02",
+        "usage": 644,
+        "cost": 339,
+        "timestamp": "2026-03-05T16:31:23.132Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-03",
+        "usage": 496,
+        "cost": 255.9,
+        "timestamp": "2026-03-05T16:31:11.054Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-04",
+        "usage": 410,
+        "cost": 214.5,
+        "timestamp": "2026-03-05T16:30:59.295Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-05",
+        "usage": 392,
+        "cost": 203.7,
+        "timestamp": "2026-03-05T16:30:12.223Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-06",
+        "usage": 508,
+        "cost": 263.2,
+        "timestamp": "2026-03-05T16:29:54.498Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-07",
+        "usage": 708,
+        "cost": 397.4,
+        "timestamp": "2026-03-05T16:29:44.328Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-08",
+        "usage": 762,
+        "cost": 427.2,
+        "timestamp": "2026-03-05T16:29:31.502Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-09",
+        "usage": 622,
+        "cost": 443,
+        "timestamp": "2026-03-05T16:29:10.874Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-10",
+        "usage": 458,
+        "cost": 377.4,
+        "timestamp": "2026-03-05T16:27:14.446Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-11",
+        "usage": 441,
+        "cost": 361.8,
+        "timestamp": "2026-03-05T16:26:53.432Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-12",
+        "usage": 480,
+        "cost": 398.9,
+        "timestamp": "2026-03-05T16:26:33.149Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2026-01",
+        "usage": 550,
+        "cost": 284.5,
+        "timestamp": "2026-03-05T16:26:14.553Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2026-02",
+        "usage": 414,
+        "cost": 214.8,
+        "timestamp": "2026-03-05T16:26:03.253Z",
+        "source": "import",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      }
+    ],
+    "water": [
+      {
+        "date": "2024-01",
+        "usage": 32,
+        "cost": 129.6,
+        "timestamp": "2026-03-06T18:05:02.995Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-03",
+        "usage": 33,
+        "cost": 133.7,
+        "timestamp": "2026-03-06T18:06:12.011Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-05",
+        "usage": 33,
+        "cost": 133.6,
+        "timestamp": "2026-03-06T17:38:34.206Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-07",
+        "usage": 28,
+        "cost": 113.4,
+        "timestamp": "2026-03-06T17:38:18.875Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-09",
+        "usage": 26,
+        "cost": 105.3,
+        "timestamp": "2026-03-06T17:38:04.242Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-11",
+        "usage": 28,
+        "cost": 113.4,
+        "timestamp": "2026-03-06T17:37:53.474Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-01",
+        "usage": 30,
+        "cost": 121.5,
+        "timestamp": "2026-03-06T17:37:31.440Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-03",
+        "usage": 20,
+        "cost": 81,
+        "timestamp": "2026-03-06T17:36:51.987Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-05",
+        "usage": 29,
+        "cost": 117.5,
+        "timestamp": "2026-03-06T17:36:36.781Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-07",
+        "usage": 29,
+        "cost": 117.4,
+        "timestamp": "2026-03-06T17:36:12.056Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-09",
+        "usage": 25,
+        "cost": 101.3,
+        "timestamp": "2026-03-06T17:36:00.343Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-11",
+        "usage": 32,
+        "cost": 129.6,
+        "timestamp": "2026-03-06T17:35:47.508Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2026-01",
+        "usage": 37,
+        "cost": 149.8,
+        "timestamp": "2026-03-06T17:35:25.454Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      }
+    ],
+    "gas": [
+      {
+        "date": "2024-01",
+        "usage": 59,
+        "cost": 177,
+        "timestamp": "2026-03-06T18:03:31.068Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-03",
+        "usage": 68,
+        "cost": 204,
+        "timestamp": "2026-03-06T18:00:51.896Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-05",
+        "usage": 71,
+        "cost": 213,
+        "timestamp": "2026-03-06T18:00:38.385Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-07",
+        "usage": 35,
+        "cost": 105,
+        "timestamp": "2026-03-06T18:00:26.579Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-09",
+        "usage": 23,
+        "cost": 69,
+        "timestamp": "2026-03-06T18:00:07.007Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2024-11",
+        "usage": 28,
+        "cost": 84,
+        "timestamp": "2026-03-06T17:59:49.060Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-01",
+        "usage": 60,
+        "cost": 180,
+        "timestamp": "2026-03-06T17:59:25.219Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-03",
+        "usage": 47,
+        "cost": 141,
+        "timestamp": "2026-03-06T17:59:10.531Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-05",
+        "usage": 50,
+        "cost": 150,
+        "timestamp": "2026-03-06T17:54:03.780Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-07",
+        "usage": 43,
+        "cost": 129,
+        "timestamp": "2026-03-06T17:53:46.653Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-09",
+        "usage": 22,
+        "cost": 66,
+        "timestamp": "2026-03-06T18:08:42.258Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2025-11",
+        "usage": 28,
+        "cost": 84,
+        "timestamp": "2026-03-06T17:52:29.611Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2026-01",
+        "usage": 71,
+        "cost": 213,
+        "timestamp": "2026-03-06T17:52:10.199Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      },
+      {
+        "date": "2026-03",
+        "usage": 60,
+        "cost": 180,
+        "timestamp": "2026-03-06T17:51:55.234Z",
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
+      }
+    ]
+  },
+  "tierSettings": {
+    "electricity": {
+      "tier1": 3120,
+      "tier2": 4800
+    },
+    "water": {
+      "tier1": 220,
+      "tier2": 300
+    },
+    "gas": {
+      "tier1": 310,
+      "tier2": 520
+    }
+  }
+}
