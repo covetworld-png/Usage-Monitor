@@ -199,10 +199,27 @@ npx http-server -p 8000
 
 ### 示例文件
 项目提供了以下示例文件供参考：
-- `data/example-config.json`: 合并格式的示例配置文件
+
+#### 统一格式示例
+- `data/data.json`: 统一格式的完整数据文件（通过网页"导出数据"功能生成）
+- `data/sample-data.json`: 统一格式的示例数据文件
+
+#### 分开格式示例（兼容旧版）
+- `data/sample-electricity.json`: 电费数据示例文件
+- `data/sample-water.json`: 水费数据示例文件
+- `data/sample-gas.json`: 燃气数据示例文件
+- `data/sample-config.json`: 阶梯设置示例文件
+
+#### 文本格式示例
 - `sample-data.txt`: 文本格式的示例数据文件
 
-要使用合并格式，只需将 `example-config.json` 重命名为 `config.json` 并放置在 `data/` 文件夹中即可。
+**使用方式**：
+1. **统一格式**: 将 `data.json` 或 `sample-data.json` 放置在 `data/` 文件夹中
+2. **分开格式**: 将示例文件重命名为对应的文件名（去掉 `sample-` 前缀）并放置在 `data/` 文件夹中
+   - `sample-electricity.json` → `electricity.json`
+   - `sample-water.json` → `water.json`
+   - `sample-gas.json` → `gas.json`
+   - `sample-config.json` → `config.json`
 
 ## 📱 浏览器支持
 

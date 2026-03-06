@@ -1,0 +1,100 @@
+[
+  {
+    "date": "2024-01",
+    "usage": 59,
+    "cost": 177,
+    "timestamp": "2026-03-06T18:03:31.068Z",
+    "source": "manual"
+  },
+  {
+    "date": "2024-03",
+    "usage": 68,
+    "cost": 204,
+    "timestamp": "2026-03-06T18:00:51.896Z",
+    "source": "manual"
+  },
+  {
+    "date": "2024-05",
+    "usage": 71,
+    "cost": 213,
+    "timestamp": "2026-03-06T18:00:38.385Z",
+    "source": "manual"
+  },
+  {
+    "date": "2024-07",
+    "usage": 35,
+    "cost": 105,
+    "timestamp": "2026-03-06T18:00:26.579Z",
+    "source": "manual"
+  },
+  {
+    "date": "2024-09",
+    "usage": 23,
+    "cost": 69,
+    "timestamp": "2026-03-06T18:00:07.007Z",
+    "source": "manual"
+  },
+  {
+    "date": "2024-11",
+    "usage": 28,
+    "cost": 84,
+    "timestamp": "2026-03-06T17:59:49.060Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-01",
+    "usage": 60,
+    "cost": 180,
+    "timestamp": "2026-03-06T17:59:25.219Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-03",
+    "usage": 47,
+    "cost": 141,
+    "timestamp": "2026-03-06T17:59:10.531Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-05",
+    "usage": 50,
+    "cost": 150,
+    "timestamp": "2026-03-06T17:54:03.780Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-07",
+    "usage": 43,
+    "cost": 129,
+    "timestamp": "2026-03-06T17:53:46.653Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-09",
+    "usage": 22,
+    "cost": 66,
+    "timestamp": "2026-03-06T18:08:42.258Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-11",
+    "usage": 28,
+    "cost": 84,
+    "timestamp": "2026-03-06T17:52:29.611Z",
+    "source": "manual"
+  },
+  {
+    "date": "2026-01",
+    "usage": 71,
+    "cost": 213,
+    "timestamp": "2026-03-06T17:52:10.199Z",
+    "source": "manual"
+  },
+  {
+    "date": "2026-03",
+    "usage": 60,
+    "cost": 180,
+    "timestamp": "2026-03-06T17:51:55.234Z",
+    "source": "manual"
+  }
+]

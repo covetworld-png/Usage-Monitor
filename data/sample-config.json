@@ -1,0 +1,16 @@
+{
+  "tierSettings": {
+    "electricity": {
+      "tier1": 3120,
+      "tier2": 4800
+    },
+    "water": {
+      "tier1": 220,
+      "tier2": 300
+    },
+    "gas": {
+      "tier1": 310,
+      "tier2": 520
+    }
+  }
+}

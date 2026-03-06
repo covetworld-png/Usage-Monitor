@@ -1,0 +1,93 @@
+[
+  {
+    "date": "2024-01",
+    "usage": 32,
+    "cost": 129.6,
+    "timestamp": "2026-03-06T18:05:02.995Z",
+    "source": "manual"
+  },
+  {
+    "date": "2024-03",
+    "usage": 33,
+    "cost": 133.7,
+    "timestamp": "2026-03-06T18:06:12.011Z",
+    "source": "manual"
+  },
+  {
+    "date": "2024-05",
+    "usage": 33,
+    "cost": 133.6,
+    "timestamp": "2026-03-06T17:38:34.206Z",
+    "source": "manual"
+  },
+  {
+    "date": "2024-07",
+    "usage": 28,
+    "cost": 113.4,
+    "timestamp": "2026-03-06T17:38:18.875Z",
+    "source": "manual"
+  },
+  {
+    "date": "2024-09",
+    "usage": 26,
+    "cost": 105.3,
+    "timestamp": "2026-03-06T17:38:04.242Z",
+    "source": "manual"
+  },
+  {
+    "date": "2024-11",
+    "usage": 28,
+    "cost": 113.4,
+    "timestamp": "2026-03-06T17:37:53.474Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-01",
+    "usage": 30,
+    "cost": 121.5,
+    "timestamp": "2026-03-06T17:37:31.440Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-03",
+    "usage": 20,
+    "cost": 81,
+    "timestamp": "2026-03-06T17:36:51.987Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-05",
+    "usage": 29,
+    "cost": 117.5,
+    "timestamp": "2026-03-06T17:36:36.781Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-07",
+    "usage": 29,
+    "cost": 117.4,
+    "timestamp": "2026-03-06T17:36:12.056Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-09",
+    "usage": 25,
+    "cost": 101.3,
+    "timestamp": "2026-03-06T17:36:00.343Z",
+    "source": "manual"
+  },
+  {
+    "date": "2025-11",
+    "usage": 32,
+    "cost": 129.6,
+    "timestamp": "2026-03-06T17:35:47.508Z",
+    "source": "manual"
+  },
+  {
+    "date": "2026-01",
+    "usage": 37,
+    "cost": 149.8,
+    "timestamp": "2026-03-06T17:35:25.454Z",
+    "source": "manual"
+  }
+]
