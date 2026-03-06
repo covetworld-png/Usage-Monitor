@@ -57,7 +57,10 @@
         
         .ocr-preview { max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.875rem; background: #f3f4f6; padding: 0.75rem; border-radius: 0.5rem; margin-top: 0.5rem; }
         .ocr-result-item { padding: 0.5rem; margin: 0.25rem 0; background: white; border-radius: 0.375rem; border-left: 3px solid #667eea; }
-        
+
+        /* Mobile drawer animations */
+        .mobile-drawer-transition { transition: transform 0.3s ease-in-out; }
+
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #f1f1f1; }
         ::-webkit-scrollbar-thumb { background: #888; border-radius: 3px; }
@@ -173,9 +176,9 @@
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <!-- Left Column -->
-            <div class="lg:col-span-1 space-y-6">
+
+            <!-- Left Column - Hidden on mobile, shown on desktop -->
+            <div class="lg:col-span-1 space-y-6 hidden lg:block" id="leftSidebar">
                 
                 <!-- Tier Settings -->
                 <div class="bg-white rounded-xl shadow-sm p-6 fade-in border-2 border-gray-100">
@@ -378,6 +381,28 @@
                         </h4>
                         <div id="lowMonths" class="space-y-2"></div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile Settings Button -->
+    <button id="mobileSettingsBtn" class="lg:hidden fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg z-40 hover:bg-indigo-700 transition-all active:scale-95">
+        <i class="fas fa-sliders-h text-xl"></i>
+    </button>
+
+    <!-- Mobile Settings Drawer -->
+    <div id="mobileSettingsDrawer" class="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-50 hidden transition-opacity">
+        <div class="absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-xl mobile-drawer-transition transform translate-x-full">
+            <div class="h-full overflow-y-auto">
+                <div class="sticky top-0 bg-white border-b px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-lg font-semibold text-gray-800">设置</h3>
+                    <button id="closeDrawerBtn" class="text-gray-500 hover:text-gray-700">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="p-6 space-y-6" id="mobileSettingsContent">
+                    <!-- Content will be populated from left sidebar -->
                 </div>
             </div>
         </div>
@@ -1826,7 +1851,7 @@
                     const date = document.getElementById('entryDate').value;
                     const usage = parseFloat(document.getElementById('entryUsage').value);
                     const cost = parseFloat(document.getElementById('entryCost').value);
-                    
+
                     if (date && !isNaN(usage) && !isNaN(cost)) {
                         if (addRecord(date, usage, cost)) {
                             form.reset();
@@ -1838,6 +1863,131 @@
                         showToast('请输入有效数值');
                     }
                 });
+            }
+
+            // Mobile drawer setup
+            const mobileSettingsBtn = document.getElementById('mobileSettingsBtn');
+            const mobileSettingsDrawer = document.getElementById('mobileSettingsDrawer');
+            const closeDrawerBtn = document.getElementById('closeDrawerBtn');
+            const mobileSettingsContent = document.getElementById('mobileSettingsContent');
+            const leftSidebar = document.getElementById('leftSidebar');
+
+            if (mobileSettingsBtn && mobileSettingsDrawer && closeDrawerBtn && mobileSettingsContent && leftSidebar) {
+                mobileSettingsBtn.addEventListener('click', () => {
+                    // Copy content from left sidebar to mobile drawer
+                    mobileSettingsContent.innerHTML = leftSidebar.innerHTML;
+                    // Show drawer with animation
+                    mobileSettingsDrawer.classList.remove('hidden');
+                    setTimeout(() => {
+                        mobileSettingsDrawer.querySelector('.absolute').classList.remove('translate-x-full');
+                    }, 10);
+                });
+
+                closeDrawerBtn.addEventListener('click', () => {
+                    const drawerContent = mobileSettingsDrawer.querySelector('.absolute');
+                    drawerContent.classList.add('translate-x-full');
+                    setTimeout(() => {
+                        mobileSettingsDrawer.classList.add('hidden');
+                    }, 300);
+                });
+
+                // Close drawer when clicking on backdrop
+                mobileSettingsDrawer.addEventListener('click', (e) => {
+                    if (e.target === mobileSettingsDrawer) {
+                        const drawerContent = mobileSettingsDrawer.querySelector('.absolute');
+                        drawerContent.classList.add('translate-x-full');
+                        setTimeout(() => {
+                            mobileSettingsDrawer.classList.add('hidden');
+                        }, 300);
+                    }
+                });
+
+                // Update mobile drawer content when UI updates
+                const originalUpdateUI = updateUI;
+                updateUI = function() {
+                    originalUpdateUI.apply(this, arguments);
+                    // If drawer is open, update its content
+                    if (!mobileSettingsDrawer.classList.contains('hidden')) {
+                        mobileSettingsContent.innerHTML = leftSidebar.innerHTML;
+                        // Reattach event listeners for tier settings
+                        attachTierSettingsListeners();
+                    }
+                };
+
+                // Reattach tier settings listeners in mobile drawer
+                function attachTierSettingsListeners() {
+                    const tierInputs = mobileSettingsContent.querySelectorAll('input[type="number"]');
+                    tierInputs.forEach(input => {
+                        input.onchange = function() {
+                            const config = TYPE_CONFIG[currentType];
+                            const settings = tierSettings[currentType];
+                            if (this.parentElement.parentElement.querySelector('.text-green-800')) {
+                                // Tier 1 input
+                                updateTierSettings(settings.tier2, this.value);
+                            } else if (this.parentElement.parentElement.querySelector('.text-yellow-800')) {
+                                // Tier 2 input
+                                updateTierSettings(this.value, settings.tier1);
+                            }
+                        };
+                    });
+
+                    // Reattach form submit listener
+                    const mobileForm = mobileSettingsContent.querySelector('#entryForm');
+                    if (mobileForm) {
+                        mobileForm.addEventListener('submit', (e) => {
+                            e.preventDefault();
+                            const date = mobileSettingsContent.querySelector('#entryDate').value;
+                            const usage = parseFloat(mobileSettingsContent.querySelector('#entryUsage').value);
+                            const cost = parseFloat(mobileSettingsContent.querySelector('#entryCost').value);
+
+                            if (date && !isNaN(usage) && !isNaN(cost)) {
+                                if (addRecord(date, usage, cost)) {
+                                    mobileForm.reset();
+                                    const dateInput = mobileSettingsContent.querySelector('#entryDate');
+                                    if (dateInput) dateInput.value = date;
+                                    showToast('添加成功');
+                                    // Close drawer after adding record
+                                    closeDrawerBtn.click();
+                                }
+                            } else {
+                                showToast('请输入有效数值');
+                            }
+                        });
+                    }
+
+                    // Reattach delete record listeners
+                    const deleteButtons = mobileSettingsContent.querySelectorAll('button[onclick^="deleteRecord"]');
+                    deleteButtons.forEach(btn => {
+                        const originalOnclick = btn.getAttribute('onclick');
+                        btn.removeAttribute('onclick');
+                        btn.addEventListener('click', () => {
+                            const dateMatch = originalOnclick.match(/deleteRecord\('([^']+)'\)/);
+                            if (dateMatch) {
+                                deleteRecord(dateMatch[1]);
+                            }
+                        });
+                    });
+
+                    // Reattach OCR result removal listeners
+                    const ocrRemoveButtons = mobileSettingsContent.querySelectorAll('button[onclick^="removeOCRResult"]');
+                    ocrRemoveButtons.forEach(btn => {
+                        const originalOnclick = btn.getAttribute('onclick');
+                        btn.removeAttribute('onclick');
+                        btn.addEventListener('click', () => {
+                            const indexMatch = originalOnclick.match(/removeOCRResult\((\d+)\)/);
+                            if (indexMatch) {
+                                removeOCRResult(parseInt(indexMatch[1]));
+                            }
+                        });
+                    });
+
+                    // Reattach confirm OCR results listener
+                    const confirmOCRBtn = mobileSettingsContent.querySelector('button[onclick="confirmOCRResults()"]');
+                    if (confirmOCRBtn) {
+                        confirmOCRBtn.removeAttribute('onclick');
+                        confirmOCRBtn.addEventListener('click', confirmOCRResults);
+                    }
+                }
             }
 
             const now = new Date();
