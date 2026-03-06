@@ -15,7 +15,10 @@
         .water-gradient { background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%); }
         .gas-gradient { background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%); }
         
-        .chart-container { position: relative; height: 450px; width: 100%; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+        @media (min-width: 768px) {
+            .chart-container { height: 450px; }
+        }
         .scan-line { position: absolute; width: 100%; height: 3px; background: linear-gradient(to right, transparent, #10b981, transparent); box-shadow: 0 0 15px #10b981; animation: scan 2s linear infinite; z-index: 10; }
         @keyframes scan { 0% { top: 0%; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
         .fade-in { animation: fadeIn 0.5s ease-in; }
@@ -556,6 +559,19 @@
             loadFromDataFolder();
             setupEventListeners();
             setupDragAndDrop();
+
+            // 添加窗口大小改变时的重绘处理
+            let resizeTimer;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    console.log('Window resized, updating chart');
+                    if (currentChart && currentView === 'comparison') {
+                        currentChart.resize();
+                        currentChart.update();
+                    }
+                }, 250);
+            });
         });
 
         function loadFromLocalStorage() {
@@ -921,27 +937,45 @@
         }
 
         function updateComparisonView() {
+            console.log('updateComparisonView called - currentType:', currentType, 'view:', currentView);
             const years = [...new Set(allData[currentType].map(r => r.date.split('-')[0]))].sort();
+            console.log('Years found in data:', years);
             if (visibleYears.size === 0 && years.length > 0) {
                 years.forEach(year => visibleYears.add(year));
             }
             updateYearToggles(years);
-            renderComparisonChart();
-            updateAnalysis();
+
+            // 移动端延迟渲染图表，确保容器已完全渲染
+            if (window.innerWidth < 1024) { // lg breakpoint
+                console.log('Mobile device detected, delaying chart render');
+                setTimeout(() => {
+                    renderComparisonChart();
+                    updateAnalysis();
+                }, 100);
+            } else {
+                renderComparisonChart();
+                updateAnalysis();
+            }
         }
 
         // 关键修复：支持双月计费的连线
         function renderComparisonChart() {
+            console.log('renderComparisonChart called - currentType:', currentType, 'data length:', allData[currentType].length);
+            console.log('Data sample:', allData[currentType].slice(0, 3));
+
             if (currentChart) currentChart.destroy();
             const ctx = document.getElementById('mainChart').getContext('2d');
             const years = [...new Set(allData[currentType].map(r => r.date.split('-')[0]))].sort();
             const months = ['1月', '2月', '3月', '4月', '5月', '6月', '7月', '8月', '9月', '10月', '11月', '12月'];
             const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
             const config = TYPE_CONFIG[currentType];
-            
+
+            console.log('Available years:', years);
+            console.log('Current metric:', currentMetric);
+
             // 判断是否为双月计费类型
             const isBimonthly = config.billingCycle === 'bimonthly';
-            
+
             const datasets = years.map((year, index) => {
                 const data = months.map((_, m) => {
                     const record = allData[currentType].find(r => r.date === `${year}-${String(m+1).padStart(2,'0')}`);
@@ -949,7 +983,9 @@
                     const value = currentMetric === 'usage' ? record.usage : record.cost;
                     return (typeof value === 'number' && !isNaN(value)) ? value : null;
                 });
-                
+
+                console.log(`Year ${year} data:`, data);
+
                 return {
                     label: year + '年',
                     data: data,
@@ -967,95 +1003,123 @@
                     pointStyle: isBimonthly ? 'rect' : 'circle' // 双月计费用方形点
                 };
             });
-            
-            currentChart = new Chart(ctx, {
-                type: 'line',
-                data: { labels: months, datasets: datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: 'index', intersect: false },
-                    plugins: {
-                        legend: { 
-                            position: 'top', 
-                            align: 'end', 
-                            labels: { 
-                                usePointStyle: true, 
-                                padding: 20,
-                                generateLabels: function(chart) {
-                                    const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
-                                    // 为双月计费添加说明
-                                    if (isBimonthly) {
-                                        labels.forEach(label => {
-                                            label.text += ' (双月)';
-                                        });
-                                    }
-                                    return labels;
-                                }
-                            } 
-                        },
-                        tooltip: {
-                            callbacks: {
-                                title: function(context) {
-                                    const title = context[0].label || '';
-                                    if (isBimonthly) {
-                                        return title + ' (双月计费)';
-                                    }
-                                    return title;
-                                },
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) label += ': ';
-                                    const value = context.parsed.y;
-                                    if (value === null || value === undefined || isNaN(value)) {
-                                        label += '无数据';
-                                    } else {
-                                        label += value.toFixed(2);
-                                        label += currentMetric === 'usage' ? ` ${config.unit}` : ' 元';
-                                        if (isBimonthly && value > 0) {
-                                            label += ' (双月合计)';
+
+            console.log('Datasets to render:', datasets);
+
+            // 检查画布元素
+            const canvas = document.getElementById('mainChart');
+            if (!canvas) {
+                console.error('Canvas element not found!');
+                return;
+            }
+
+            console.log('Canvas dimensions:', canvas.width, 'x', canvas.height);
+            console.log('Canvas parent dimensions:', canvas.parentElement.clientWidth, 'x', canvas.parentElement.clientHeight);
+
+            try {
+                currentChart = new Chart(ctx, {
+                    type: 'line',
+                    data: { labels: months, datasets: datasets },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                align: 'end',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 20,
+                                    generateLabels: function(chart) {
+                                        const labels = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+                                        // 为双月计费添加说明
+                                        if (isBimonthly) {
+                                            labels.forEach(label => {
+                                                label.text += ' (双月)';
+                                            });
                                         }
+                                        return labels;
                                     }
-                                    return label;
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        x: { 
-                            grid: { display: false },
-                            ticks: {
-                                callback: function(val, index) {
-                                    // 双月计费类型高亮显示有数据的月份
-                                    if (isBimonthly) {
-                                        // 检查该月份是否有数据
-                                        const monthLabel = this.getLabelForValue(val);
-                                        const monthNum = parseInt(monthLabel);
-                                        // 简单处理：奇数月高亮（假设双月从1月开始）
-                                        // 实际应该根据数据动态判断
-                                    }
-                                    return this.getLabelForValue(val);
-                                }
-                            }
-                        },
-                        y: {
-                            beginAtZero: true,
-                            grid: { color: 'rgba(0,0,0,0.05)' },
-                            ticks: {
-                                callback: function(value) {
-                                    if (isNaN(value)) return '';
-                                    return value + (currentMetric === 'usage' ? ` ${config.unit}` : ' 元');
                                 }
                             },
-                            title: {
-                                display: true,
-                                text: currentMetric === 'usage' ? `用量 (${config.unit})` : '费用 (元)',
-                                font: { weight: '600' }
+                            tooltip: {
+                                callbacks: {
+                                    title: function(context) {
+                                        const title = context[0].label || '';
+                                        if (isBimonthly) {
+                                            return title + ' (双月计费)';
+                                        }
+                                        return title;
+                                    },
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) label += ': ';
+                                        const value = context.parsed.y;
+                                        if (value === null || value === undefined || isNaN(value)) {
+                                            label += '无数据';
+                                        } else {
+                                            label += value.toFixed(2);
+                                            label += currentMetric === 'usage' ? ` ${config.unit}` : ' 元';
+                                            if (isBimonthly && value > 0) {
+                                                label += ' (双月合计)';
+                                            }
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    callback: function(val, index) {
+                                        // 双月计费类型高亮显示有数据的月份
+                                        if (isBimonthly) {
+                                            // 检查该月份是否有数据
+                                            const monthLabel = this.getLabelForValue(val);
+                                            const monthNum = parseInt(monthLabel);
+                                            // 简单处理：奇数月高亮（假设双月从1月开始）
+                                            // 实际应该根据数据动态判断
+                                        }
+                                        return this.getLabelForValue(val);
+                                    }
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                grid: { color: 'rgba(0,0,0,0.05)' },
+                                ticks: {
+                                    callback: function(value) {
+                                        if (isNaN(value)) return '';
+                                        return value + (currentMetric === 'usage' ? ` ${config.unit}` : ' 元');
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: currentMetric === 'usage' ? `用量 (${config.unit})` : '费用 (元)',
+                                    font: { weight: '600' }
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
+
+                console.log('Chart created successfully');
+
+                // 强制重绘
+                setTimeout(() => {
+                    if (currentChart) {
+                        currentChart.resize();
+                        currentChart.update();
+                        console.log('Chart resized and updated');
+                    }
+                }, 100);
+
+            } catch (error) {
+                console.error('Error creating chart:', error);
+            }
         }
 
         function updateYearToggles(years) {
