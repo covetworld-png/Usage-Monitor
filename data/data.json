@@ -1,9 +1,8 @@
 {
   "version": "2.0",
-  "exportDate": "2026-03-06T18:19:08.728Z",
+  "exportDate": "2026-03-07T15:32:47.556Z",
   "data": {
     "electricity": [
-
       {
         "date": "2024-01",
         "usage": 748,
@@ -293,6 +292,48 @@
     ],
     "water": [
       {
+        "date": "2023-01",
+        "usage": 32,
+        "cost": 129.6,
+        "timestamp": "2026-03-07T15:29:48.941Z",
+        "source": "manual"
+      },
+      {
+        "date": "2023-03",
+        "usage": 29.01234567901235,
+        "cost": 117.5,
+        "timestamp": "2026-03-07T15:30:46.565Z",
+        "source": "manual"
+      },
+      {
+        "date": "2023-05",
+        "usage": 28.98765432098766,
+        "cost": 117.4,
+        "timestamp": "2026-03-07T15:31:14.997Z",
+        "source": "manual"
+      },
+      {
+        "date": "2023-07",
+        "usage": 24,
+        "cost": 97.2,
+        "timestamp": "2026-03-07T15:31:31.525Z",
+        "source": "manual"
+      },
+      {
+        "date": "2023-09",
+        "usage": 24,
+        "cost": 97.2,
+        "timestamp": "2026-03-07T15:31:51.780Z",
+        "source": "manual"
+      },
+      {
+        "date": "2023-11",
+        "usage": 30,
+        "cost": 121.5,
+        "timestamp": "2026-03-07T15:32:06.997Z",
+        "source": "manual"
+      },
+      {
         "date": "2024-01",
         "usage": 32,
         "cost": 129.6,
@@ -437,6 +478,48 @@
       }
     ],
     "gas": [
+      {
+        "date": "2023-01",
+        "usage": 66,
+        "cost": 198,
+        "timestamp": "2026-03-07T15:23:41.450Z",
+        "source": "manual"
+      },
+      {
+        "date": "2023-03",
+        "usage": 65.96666666666667,
+        "cost": 197.9,
+        "timestamp": "2026-03-07T15:24:14.180Z",
+        "source": "manual"
+      },
+      {
+        "date": "2023-05",
+        "usage": 58.96666666666667,
+        "cost": 176.9,
+        "timestamp": "2026-03-07T15:24:36.825Z",
+        "source": "manual"
+      },
+      {
+        "date": "2023-07",
+        "usage": 32,
+        "cost": 96,
+        "timestamp": "2026-03-07T15:25:07.045Z",
+        "source": "manual"
+      },
+      {
+        "date": "2023-09",
+        "usage": 21,
+        "cost": 63,
+        "timestamp": "2026-03-07T15:25:42.460Z",
+        "source": "manual"
+      },
+      {
+        "date": "2023-11",
+        "usage": 30.64,
+        "cost": 91.92,
+        "timestamp": "2026-03-07T15:26:02.609Z",
+        "source": "manual"
+      },
       {
         "date": "2024-01",
         "usage": 59,
@@ -600,11 +683,17 @@
     },
     "water": {
       "tier1": 220,
-      "tier2": 300
+      "tier2": 300,
+      "price1": 4.05,
+      "price2": 5.8,
+      "price3": 8.79
     },
     "gas": {
       "tier1": 310,
-      "tier2": 520
+      "tier2": 520,
+      "price1": 3,
+      "price2": 3.3,
+      "price3": 4.2
     }
   }
 }
