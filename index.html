@@ -836,9 +836,11 @@
             
             if (!container || !settings || !config) return;
             
-            container.innerHTML = `
-                ${currentType === 'electricity' ? `
-                <!-- 电费：峰谷电价设置 -->
+            let html = '';
+            
+            if (currentType === 'electricity') {
+                // 电费：峰谷电价设置
+                html = `
                 <div class="p-3 bg-green-50 rounded-lg border border-green-200">
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center">
@@ -906,8 +908,10 @@
                         </div>
                     </div>
                 </div>
-                ` : `
-                <!-- 水费/燃气费：单价设置 -->
+                `;
+            } else {
+                // 水费/燃气费：单价设置
+                html = `
                 <div class="p-3 bg-green-50 rounded-lg border border-green-200">
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center">
@@ -957,8 +961,10 @@
                         <input type="number" step="0.01" value="${settings.price3 || ''}" placeholder="未设置" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, ${settings.price1 || 0}, ${settings.price2 || 0}, this.value)" class="w-20 px-2 py-1 text-sm border border-red-300 rounded text-center">
                     </div>
                 </div>
-                `}
-            `;
+                `;
+            }
+            
+            container.innerHTML = html;
         }
 
         function updateTierSettings(tier2, tier1, price1, price2, price3, peakPrice1, valleyPrice1, peakPrice2, valleyPrice2, peakPrice3, valleyPrice3) {
