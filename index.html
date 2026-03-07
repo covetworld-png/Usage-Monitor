@@ -492,7 +492,17 @@
         };
 
         let tierSettings = {
-            electricity: { tier1: 260, tier2: 600 }, // 电费有峰谷，暂不配置单价
+            electricity: { 
+                tier1: 3120, 
+                tier2: 4800,
+                // 峰谷电价：每个阶梯有峰时和谷时两个价格
+                peakPrice1: 0.617,  // 第一阶梯峰时
+                valleyPrice1: 0.307, // 第一阶梯谷时
+                peakPrice2: 0.677,  // 第二阶梯峰时
+                valleyPrice2: 0.337, // 第二阶梯谷时
+                peakPrice3: 0.977,  // 第三阶梯峰时
+                valleyPrice3: 0.487  // 第三阶梯谷时
+            },
             water: { tier1: 220, tier2: 300, price1: 4.05, price2: 5.80, price3: 8.79 },
             gas: { tier1: 310, tier2: 520, price1: 3.00, price2: 3.30, price3: 4.20 }
         };
@@ -827,6 +837,77 @@
             if (!container || !settings || !config) return;
             
             container.innerHTML = `
+                ${currentType === 'electricity' ? `
+                <!-- 电费：峰谷电价设置 -->
+                <div class="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                            <span class="text-sm font-medium text-green-800">第一阶梯</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-green-600">0 -</span>
+                            <input type="number" value="${settings.tier1}" onchange="updateTierSettings(${settings.tier2}, this.value, 0,0,0, ${settings.peakPrice1 || 0}, ${settings.valleyPrice1 || 0}, ${settings.peakPrice2 || 0}, ${settings.valleyPrice2 || 0}, ${settings.peakPrice3 || 0}, ${settings.valleyPrice3 || 0})" class="w-14 px-1 py-1 text-sm border border-green-300 rounded text-center">
+                            <span class="text-xs text-green-600">${config.unit}</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-green-600">峰时 (¥):</span>
+                            <input type="number" step="0.001" value="${settings.peakPrice1 || ''}" placeholder="0.000" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, 0,0,0, this.value, ${settings.valleyPrice1 || 0}, ${settings.peakPrice2 || 0}, ${settings.valleyPrice2 || 0}, ${settings.peakPrice3 || 0}, ${settings.valleyPrice3 || 0})" class="w-16 px-1 py-1 text-sm border border-green-300 rounded text-center">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-green-600">谷时 (¥):</span>
+                            <input type="number" step="0.001" value="${settings.valleyPrice1 || ''}" placeholder="0.000" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, 0,0,0, ${settings.peakPrice1 || 0}, this.value, ${settings.peakPrice2 || 0}, ${settings.valleyPrice2 || 0}, ${settings.peakPrice3 || 0}, ${settings.valleyPrice3 || 0})" class="w-16 px-1 py-1 text-sm border border-green-300 rounded text-center">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
+                            <span class="text-sm font-medium text-yellow-800">第二阶梯</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-yellow-600">${parseInt(settings.tier1) + 1} -</span>
+                            <input type="number" value="${settings.tier2}" onchange="updateTierSettings(this.value, ${settings.tier1}, 0,0,0, ${settings.peakPrice1 || 0}, ${settings.valleyPrice1 || 0}, ${settings.peakPrice2 || 0}, ${settings.valleyPrice2 || 0}, ${settings.peakPrice3 || 0}, ${settings.valleyPrice3 || 0})" class="w-14 px-1 py-1 text-sm border border-yellow-300 rounded text-center">
+                            <span class="text-xs text-yellow-600">${config.unit}</span>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-yellow-600">峰时 (¥):</span>
+                            <input type="number" step="0.001" value="${settings.peakPrice2 || ''}" placeholder="0.000" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, 0,0,0, ${settings.peakPrice1 || 0}, ${settings.valleyPrice1 || 0}, this.value, ${settings.valleyPrice2 || 0}, ${settings.peakPrice3 || 0}, ${settings.valleyPrice3 || 0})" class="w-16 px-1 py-1 text-sm border border-yellow-300 rounded text-center">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-yellow-600">谷时 (¥):</span>
+                            <input type="number" step="0.001" value="${settings.valleyPrice2 || ''}" placeholder="0.000" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, 0,0,0, ${settings.peakPrice1 || 0}, ${settings.valleyPrice1 || 0}, ${settings.peakPrice2 || 0}, this.value, ${settings.peakPrice3 || 0}, ${settings.valleyPrice3 || 0})" class="w-16 px-1 py-1 text-sm border border-yellow-300 rounded text-center">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                            <span class="text-sm font-medium text-red-800">第三阶梯</span>
+                        </div>
+                        <span class="text-xs text-red-600">${parseInt(settings.tier2) + 1} ${config.unit}以上</span>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="flex items-center justify-between">
+                            <span class="text-red-600">峰时 (¥):</span>
+                            <input type="number" step="0.001" value="${settings.peakPrice3 || ''}" placeholder="0.000" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, 0,0,0, ${settings.peakPrice1 || 0}, ${settings.valleyPrice1 || 0}, ${settings.peakPrice2 || 0}, ${settings.valleyPrice2 || 0}, this.value, ${settings.valleyPrice3 || 0})" class="w-16 px-1 py-1 text-sm border border-red-300 rounded text-center">
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-red-600">谷时 (¥):</span>
+                            <input type="number" step="0.001" value="${settings.valleyPrice3 || ''}" placeholder="0.000" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, 0,0,0, ${settings.peakPrice1 || 0}, ${settings.valleyPrice1 || 0}, ${settings.peakPrice2 || 0}, ${settings.valleyPrice2 || 0}, ${settings.peakPrice3 || 0}, this.value)" class="w-16 px-1 py-1 text-sm border border-red-300 rounded text-center">
+                        </div>
+                    </div>
+                </div>
+                ` : `
+                <!-- 水费/燃气费：单价设置 -->
                 <div class="p-3 bg-green-50 rounded-lg border border-green-200">
                     <div class="flex items-center justify-between mb-2">
                         <div class="flex items-center">
@@ -876,10 +957,11 @@
                         <input type="number" step="0.01" value="${settings.price3 || ''}" placeholder="未设置" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, ${settings.price1 || 0}, ${settings.price2 || 0}, this.value)" class="w-20 px-2 py-1 text-sm border border-red-300 rounded text-center">
                     </div>
                 </div>
+                `}
             `;
         }
 
-        function updateTierSettings(tier2, tier1, price1, price2, price3) {
+        function updateTierSettings(tier2, tier1, price1, price2, price3, peakPrice1, valleyPrice1, peakPrice2, valleyPrice2, peakPrice3, valleyPrice3) {
             const settings = {
                 tier1: parseInt(tier1) || 0,
                 tier2: parseInt(tier2) || 0
@@ -888,6 +970,13 @@
             if (price1 !== undefined) settings.price1 = parseFloat(price1) || 0;
             if (price2 !== undefined) settings.price2 = parseFloat(price2) || 0;
             if (price3 !== undefined) settings.price3 = parseFloat(price3) || 0;
+            // 峰谷电价
+            if (peakPrice1 !== undefined) settings.peakPrice1 = parseFloat(peakPrice1) || 0;
+            if (valleyPrice1 !== undefined) settings.valleyPrice1 = parseFloat(valleyPrice1) || 0;
+            if (peakPrice2 !== undefined) settings.peakPrice2 = parseFloat(peakPrice2) || 0;
+            if (valleyPrice2 !== undefined) settings.valleyPrice2 = parseFloat(valleyPrice2) || 0;
+            if (peakPrice3 !== undefined) settings.peakPrice3 = parseFloat(peakPrice3) || 0;
+            if (valleyPrice3 !== undefined) settings.valleyPrice3 = parseFloat(valleyPrice3) || 0;
             
             tierSettings[currentType] = settings;
             saveToLocalStorage();
