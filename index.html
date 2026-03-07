@@ -75,20 +75,20 @@
     <div class="bg-white shadow-sm border-b sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex space-x-1 py-3">
-                <button onclick="switchType('electricity')" id="tab-electricity" class="type-tab active flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold flex items-center justify-center space-x-2 shadow-md">
-                    <i class="fas fa-bolt text-yellow-300"></i>
-                    <span>电费</span>
-                    <span id="badge-electricity" class="bg-white/20 text-xs px-2 py-0.5 rounded-full ml-2 hidden">0</span>
+                <button onclick="switchType('electricity')" id="tab-electricity" class="type-tab active flex-1 bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-2 sm:py-3 px-3 sm:px-4 rounded-xl font-semibold flex items-center justify-center space-x-1 sm:space-x-2 shadow-md">
+                    <i class="fas fa-bolt text-yellow-300 text-sm sm:text-base"></i>
+                    <span class="text-sm sm:text-base">电费</span>
+                    <span id="badge-electricity" class="bg-white/20 text-xs px-2 py-0.5 rounded-full ml-1 sm:ml-2 hidden">0</span>
                 </button>
-                <button onclick="switchType('water')" id="tab-water" class="type-tab flex-1 bg-gray-100 text-gray-600 py-3 px-4 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:bg-blue-50 hover:text-blue-600">
-                    <i class="fas fa-tint text-blue-400"></i>
-                    <span>水费</span>
-                    <span id="badge-water" class="bg-gray-200 text-xs px-2 py-0.5 rounded-full ml-2 hidden">0</span>
+                <button onclick="switchType('water')" id="tab-water" class="type-tab flex-1 bg-gray-100 text-gray-600 py-2 sm:py-3 px-3 sm:px-4 rounded-xl font-semibold flex items-center justify-center space-x-1 sm:space-x-2 hover:bg-blue-50 hover:text-blue-600">
+                    <i class="fas fa-tint text-blue-400 text-sm sm:text-base"></i>
+                    <span class="text-sm sm:text-base">水费</span>
+                    <span id="badge-water" class="bg-gray-200 text-xs px-2 py-0.5 rounded-full ml-1 sm:ml-2 hidden">0</span>
                 </button>
-                <button onclick="switchType('gas')" id="tab-gas" class="type-tab flex-1 bg-gray-100 text-gray-600 py-3 px-4 rounded-xl font-semibold flex items-center justify-center space-x-2 hover:bg-orange-50 hover:text-orange-600">
-                    <i class="fas fa-fire text-orange-400"></i>
-                    <span>燃气</span>
-                    <span id="badge-gas" class="bg-gray-200 text-xs px-2 py-0.5 rounded-full ml-2 hidden">0</span>
+                <button onclick="switchType('gas')" id="tab-gas" class="type-tab flex-1 bg-gray-100 text-gray-600 py-2 sm:py-3 px-3 sm:px-4 rounded-xl font-semibold flex items-center justify-center space-x-1 sm:space-x-2 hover:bg-orange-50 hover:text-orange-600">
+                    <i class="fas fa-fire text-orange-400 text-sm sm:text-base"></i>
+                    <span class="text-sm sm:text-base">燃气</span>
+                    <span id="badge-gas" class="bg-gray-200 text-xs px-2 py-0.5 rounded-full ml-1 sm:ml-2 hidden">0</span>
                 </button>
             </div>
         </div>
@@ -98,9 +98,9 @@
     <nav class="gradient-bg text-white shadow-lg sticky top-[73px] z-30">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16 items-center">
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-home text-2xl text-white/90"></i>
-                    <span class="font-bold text-xl tracking-tight">家庭能耗管家</span>
+                <div class="flex items-center space-x-2 sm:space-x-3">
+                    <i class="fas fa-home text-xl sm:text-2xl text-white/90"></i>
+                    <span class="font-bold text-lg sm:text-xl tracking-tight">家庭能耗管家</span>
                 </div>
                 <div class="flex items-center space-x-3">
                     <button onclick="syncFromDataFolder()" class="px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-2 text-sm" title="从data文件夹重新加载">
