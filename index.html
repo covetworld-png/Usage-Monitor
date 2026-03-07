@@ -167,14 +167,14 @@
             <div class="bg-white rounded-xl shadow-sm p-5 border-l-4 border-orange-500">
                 <div class="flex justify-between items-start">
                     <div>
-                        <p class="text-sm font-medium text-gray-600">记录总数</p>
-                        <p class="text-2xl font-bold text-gray-900 mt-1" id="totalRecords">0</p>
+                        <p class="text-sm font-medium text-gray-600">阶梯预测</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1" id="tierPrediction">--</p>
                     </div>
                     <div class="p-2 bg-orange-100 rounded-lg text-orange-600">
-                        <i class="fas fa-database text-xl"></i>
+                        <i class="fas fa-chart-line text-xl"></i>
                     </div>
                 </div>
-                <p class="text-xs text-gray-500 mt-2">本地+云端</p>
+                <p class="text-xs text-gray-500 mt-2" id="tierPredictionDetail">基于历史趋势预测</p>
             </div>
         </div>
 
@@ -265,6 +265,17 @@
                 <div class="bg-white rounded-xl shadow-sm p-6 fade-in">
                     <h3 class="text-lg font-semibold text-gray-800 mb-4">最近记录</h3>
                     <div class="overflow-y-auto max-h-64 space-y-2" id="recentList"></div>
+                </div>
+
+                <!-- Total Records (moved to inconspicuous position) -->
+                <div class="bg-gray-50 rounded-xl p-4 fade-in border border-gray-200">
+                    <div class="flex items-center justify-between text-gray-500">
+                        <div class="flex items-center space-x-2">
+                            <i class="fas fa-database text-sm"></i>
+                            <span class="text-xs">记录总数</span>
+                        </div>
+                        <span class="text-sm font-medium" id="totalRecords">0</span>
+                    </div>
                 </div>
             </div>
 
@@ -1378,6 +1389,11 @@
             const currentYear = new Date().getFullYear();
             const yearData = allData[currentType].filter(r => r.date.startsWith(currentYear.toString()));
             
+            // 获取今年已有数据的最大月份
+            const currentMonths = yearData.map(r => parseInt(r.date.split('-')[1])).filter(m => !isNaN(m));
+            const maxMonth = currentMonths.length > 0 ? Math.max(...currentMonths) : 0;
+            
+            // 计算今年累计（所有已有数据）
             const yearCost = yearData.reduce((sum, r) => {
                 const cost = parseFloat(r.cost);
                 return sum + (isNaN(cost) ? 0 : cost);
@@ -1396,15 +1412,19 @@
             if (usageEl) usageEl.textContent = `${yearUsage.toFixed(1)} ${TYPE_CONFIG[currentType].unit}`;
             if (totalEl) totalEl.textContent = allData[currentType].length;
             
+            // 同期对比：今年 vs 去年相同月份范围
             const lastYear = currentYear - 1;
-            const lastYearData = allData[currentType].filter(r => r.date.startsWith(lastYear.toString()));
+            const lastYearSamePeriodData = allData[currentType].filter(r => {
+                const parts = r.date.split('-');
+                return parts[0] === lastYear.toString() && parseInt(parts[1]) <= maxMonth;
+            });
             
-            if (lastYearData.length > 0) {
-                const lastCost = lastYearData.reduce((sum, r) => {
+            if (lastYearSamePeriodData.length > 0 && maxMonth > 0) {
+                const lastCost = lastYearSamePeriodData.reduce((sum, r) => {
                     const cost = parseFloat(r.cost);
                     return sum + (isNaN(cost) ? 0 : cost);
                 }, 0);
-                const lastUsage = lastYearData.reduce((sum, r) => {
+                const lastUsage = lastYearSamePeriodData.reduce((sum, r) => {
                     const usage = parseFloat(r.usage);
                     return sum + (isNaN(usage) ? 0 : usage);
                 }, 0);
@@ -1416,19 +1436,200 @@
                 const usageCompareEl = document.getElementById('currentYearUsageCompare');
                 
                 if (costCompareEl) {
-                    costCompareEl.innerHTML = `较去年 <span class="${costDiff > 0 ? 'text-red-500' : 'text-green-500'}">${costDiff > 0 ? '+' : ''}${costDiff}%</span>`;
+                    costCompareEl.innerHTML = `较去年同期 <span class="${costDiff > 0 ? 'text-red-500' : 'text-green-500'}">${costDiff > 0 ? '+' : ''}${costDiff}%</span>`;
                 }
                 if (usageCompareEl) {
-                    usageCompareEl.innerHTML = `较去年 <span class="${usageDiff > 0 ? 'text-red-500' : 'text-green-500'}">${usageDiff > 0 ? '+' : ''}${usageDiff}%</span>`;
+                    usageCompareEl.innerHTML = `较去年同期 <span class="${usageDiff > 0 ? 'text-red-500' : 'text-green-500'}">${usageDiff > 0 ? '+' : ''}${usageDiff}%</span>`;
                 }
             } else {
                 const costCompareEl = document.getElementById('currentYearCompare');
                 const usageCompareEl = document.getElementById('currentYearUsageCompare');
-                if (costCompareEl) costCompareEl.innerHTML = '较去年 --';
-                if (usageCompareEl) usageCompareEl.innerHTML = '较去年 --';
+                if (costCompareEl) costCompareEl.innerHTML = '较去年同期 --';
+                if (usageCompareEl) usageCompareEl.innerHTML = '较去年同期 --';
             }
             
             updateCurrentTierDisplay();
+            updateTierPrediction();
+        }
+
+        // 阶梯预测：基于历史季节性趋势预测进入下一阶梯的时间
+        function updateTierPrediction() {
+            const currentYear = new Date().getFullYear();
+            const yearData = allData[currentType].filter(r => r.date.startsWith(currentYear.toString()));
+            const settings = tierSettings[currentType];
+            
+            const predictionEl = document.getElementById('tierPrediction');
+            const detailEl = document.getElementById('tierPredictionDetail');
+            
+            if (!settings || yearData.length === 0) {
+                if (predictionEl) predictionEl.textContent = '--';
+                if (detailEl) detailEl.textContent = '数据不足';
+                return;
+            }
+            
+            // 获取当前累计用量和当前阶梯
+            const currentUsage = yearData.reduce((sum, r) => sum + (parseFloat(r.usage) || 0), 0);
+            let currentTier = 1;
+            if (currentUsage > settings.tier2) currentTier = 3;
+            else if (currentUsage > settings.tier1) currentTier = 2;
+            
+            // 如果已在第三阶梯，显示已最高阶
+            if (currentTier === 3) {
+                if (predictionEl) {
+                    predictionEl.textContent = '已最高阶';
+                    predictionEl.className = 'text-2xl font-bold mt-1 text-red-600';
+                }
+                if (detailEl) detailEl.textContent = '已达第三阶梯';
+                return;
+            }
+            
+            const nextTier = currentTier + 1;
+            const nextTierLimit = nextTier === 2 ? settings.tier1 : settings.tier2;
+            
+            // 获取今年已有数据的月份
+            const currentMonths = yearData.map(r => parseInt(r.date.split('-')[1])).filter(m => !isNaN(m));
+            const maxMonth = Math.max(...currentMonths);
+            const minMonth = Math.min(...currentMonths);
+            
+            // 如果只有一个月数据，无法预测
+            if (currentMonths.length < 2) {
+                if (predictionEl) {
+                    predictionEl.textContent = '数据不足';
+                    predictionEl.className = 'text-2xl font-bold mt-1 text-gray-500';
+                }
+                if (detailEl) detailEl.textContent = '需至少2个月数据';
+                return;
+            }
+            
+            // 收集历史年份的月度分布数据
+            const historicalYears = [...new Set(allData[currentType].map(r => r.date.split('-')[0]))]
+                .filter(y => parseInt(y) < currentYear)
+                .sort();
+            
+            if (historicalYears.length === 0) {
+                // 没有历史数据，使用简单平均
+                const avgMonthly = currentUsage / currentMonths.length;
+                const remaining = nextTierLimit - currentUsage;
+                const monthsToNext = Math.ceil(remaining / avgMonthly);
+                const predictedMonth = maxMonth + monthsToNext;
+                
+                updatePredictionDisplay(predictedMonth, nextTier, currentTier, currentUsage, nextTierLimit, false);
+                return;
+            }
+            
+            // 计算历史年份的月度分布比例
+            const monthlyRatios = []; // 每个月份占全年的比例
+            
+            historicalYears.forEach(year => {
+                const yearAllData = allData[currentType].filter(r => r.date.startsWith(year));
+                if (yearAllData.length >= 6) { // 至少需要半年数据
+                    const yearTotal = yearAllData.reduce((sum, r) => sum + (parseFloat(r.usage) || 0), 0);
+                    if (yearTotal > 0) {
+                        for (let m = 1; m <= 12; m++) {
+                            const monthData = yearAllData.filter(r => parseInt(r.date.split('-')[1]) === m);
+                            const monthUsage = monthData.reduce((sum, r) => sum + (parseFloat(r.usage) || 0), 0);
+                            if (!monthlyRatios[m]) monthlyRatios[m] = [];
+                            monthlyRatios[m].push(monthUsage / yearTotal);
+                        }
+                    }
+                }
+            });
+            
+            // 计算平均月度比例
+            const avgMonthlyRatios = [];
+            for (let m = 1; m <= 12; m++) {
+                if (monthlyRatios[m] && monthlyRatios[m].length > 0) {
+                    const avg = monthlyRatios[m].reduce((a, b) => a + b, 0) / monthlyRatios[m].length;
+                    avgMonthlyRatios[m] = avg;
+                } else {
+                    // 如果某个月份没有历史数据，使用平均值
+                    avgMonthlyRatios[m] = 1/12;
+                }
+            }
+            
+            // 计算已过去月份的累计比例
+            let pastMonthsRatio = 0;
+            for (let m = 1; m <= maxMonth; m++) {
+                pastMonthsRatio += avgMonthlyRatios[m] || 0;
+            }
+            
+            // 预测全年总用量 = 当前用量 / 已过去月份比例
+            const predictedYearTotal = pastMonthsRatio > 0 ? currentUsage / pastMonthsRatio : currentUsage * (12 / maxMonth);
+            
+            // 逐月累加预测，找出突破时间
+            let predictedCumulative = currentUsage;
+            let predictedMonth = maxMonth;
+            
+            // 如果已经超过下一阶梯，应该已经在更早的逻辑中处理了
+            if (predictedCumulative >= nextTierLimit) {
+                // 已经超过，回溯找出大约哪个月份突破的
+                predictedMonth = findBreakMonth(yearData, nextTierLimit);
+            } else {
+                // 逐月预测未来
+                for (let m = maxMonth + 1; m <= 12; m++) {
+                    const monthRatio = avgMonthlyRatios[m] || (1/12);
+                    const predictedMonthUsage = predictedYearTotal * monthRatio;
+                    predictedCumulative += predictedMonthUsage;
+                    
+                    if (predictedCumulative >= nextTierLimit) {
+                        predictedMonth = m;
+                        break;
+                    }
+                }
+                
+                // 如果到12月还没突破
+                if (predictedCumulative < nextTierLimit) {
+                    if (predictionEl) {
+                        predictionEl.textContent = '预计不突破';
+                        predictionEl.className = 'text-2xl font-bold mt-1 text-green-600';
+                    }
+                    if (detailEl) detailEl.textContent = `当前${currentTier === 1 ? '一' : '二'}阶，全年预测${predictedYearTotal.toFixed(0)}${TYPE_CONFIG[currentType].unit}`;
+                    return;
+                }
+            }
+            
+            updatePredictionDisplay(predictedMonth, nextTier, currentTier, currentUsage, nextTierLimit, true);
+        }
+        
+        // 回溯找出突破阶梯的月份
+        function findBreakMonth(yearData, tierLimit) {
+            let cumulative = 0;
+            const sorted = yearData.sort((a, b) => a.date.localeCompare(b.date));
+            for (const record of sorted) {
+                const month = parseInt(record.date.split('-')[1]);
+                cumulative += parseFloat(record.usage) || 0;
+                if (cumulative >= tierLimit) {
+                    return month;
+                }
+            }
+            return 12;
+        }
+        
+        // 更新预测显示
+        function updatePredictionDisplay(predictedMonth, nextTier, currentTier, currentUsage, tierLimit, willBreak) {
+            const predictionEl = document.getElementById('tierPrediction');
+            const detailEl = document.getElementById('tierPredictionDetail');
+            
+            if (!predictionEl) return;
+            
+            const tierNames = ['', '一', '二', '三'];
+            
+            if (willBreak && predictedMonth <= 12) {
+                predictionEl.textContent = `预计${predictedMonth}月`;
+                predictionEl.className = 'text-2xl font-bold mt-1 text-orange-600';
+                if (detailEl) {
+                    detailEl.textContent = `进入第${tierNames[nextTier]}阶梯`;
+                }
+            } else if (currentUsage >= tierLimit) {
+                // 已经突破但是在当前逻辑中没被捕捉到
+                predictionEl.textContent = '已进阶';
+                predictionEl.className = 'text-2xl font-bold mt-1 text-yellow-600';
+                if (detailEl) detailEl.textContent = `已进入第${tierNames[nextTier]}阶梯`;
+            } else {
+                predictionEl.textContent = '不可预测';
+                predictionEl.className = 'text-2xl font-bold mt-1 text-gray-500';
+                if (detailEl) detailEl.textContent = '数据不足';
+            }
         }
 
         function updateCurrentTierDisplay() {
