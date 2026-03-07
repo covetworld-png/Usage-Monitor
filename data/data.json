@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "exportDate": "2026-03-07T15:32:47.556Z",
+  "exportDate": "2026-03-07T15:53:39.448Z",
   "data": {
     "electricity": [
       {
@@ -296,42 +296,66 @@
         "usage": 32,
         "cost": 129.6,
         "timestamp": "2026-03-07T15:29:48.941Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2023-03",
         "usage": 29.01234567901235,
         "cost": 117.5,
         "timestamp": "2026-03-07T15:30:46.565Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2023-05",
         "usage": 28.98765432098766,
         "cost": 117.4,
         "timestamp": "2026-03-07T15:31:14.997Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2023-07",
         "usage": 24,
         "cost": 97.2,
         "timestamp": "2026-03-07T15:31:31.525Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2023-09",
         "usage": 24,
         "cost": 97.2,
         "timestamp": "2026-03-07T15:31:51.780Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2023-11",
         "usage": 30,
         "cost": 121.5,
         "timestamp": "2026-03-07T15:32:06.997Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2024-01",
@@ -483,42 +507,66 @@
         "usage": 66,
         "cost": 198,
         "timestamp": "2026-03-07T15:23:41.450Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2023-03",
         "usage": 65.96666666666667,
         "cost": 197.9,
         "timestamp": "2026-03-07T15:24:14.180Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2023-05",
         "usage": 58.96666666666667,
         "cost": 176.9,
         "timestamp": "2026-03-07T15:24:36.825Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2023-07",
         "usage": 32,
         "cost": 96,
         "timestamp": "2026-03-07T15:25:07.045Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2023-09",
         "usage": 21,
         "cost": 63,
         "timestamp": "2026-03-07T15:25:42.460Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2023-11",
         "usage": 30.64,
         "cost": 91.92,
         "timestamp": "2026-03-07T15:26:02.609Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2024-01",
@@ -679,7 +727,16 @@
   "tierSettings": {
     "electricity": {
       "tier1": 3120,
-      "tier2": 4800
+      "tier2": 4800,
+      "price1": 0,
+      "price2": 0,
+      "price3": 0,
+      "peakPrice1": 0.617,
+      "valleyPrice1": 0.307,
+      "peakPrice2": 0.667,
+      "valleyPrice2": 0.337,
+      "peakPrice3": 0.917,
+      "valleyPrice3": 0.487
     },
     "water": {
       "tier1": 220,
