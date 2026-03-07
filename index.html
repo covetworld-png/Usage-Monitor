@@ -248,7 +248,7 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1" id="usageLabel">用量</label>
-                                <input type="number" id="entryUsage" step="0.01" placeholder="留空则自动计算" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition">
+                                <input type="number" id="entryUsage" step="0.01" placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1">费用金额 (¥) <span class="text-red-500">*</span></label>
@@ -256,11 +256,11 @@
                             </div>
                         </div>
                         <!-- 自动计算提示 -->
-                        <div id="autoCalcHint" class="hidden text-xs text-blue-600 bg-blue-50 p-2 rounded-lg">
+                        <div id="autoCalcHint" class="hidden text-xs text-blue-600 bg-blue-50 p-2 rounded-lg auto-calc-element">
                             <i class="fas fa-calculator mr-1"></i>
                             <span id="calcResult"></span>
                         </div>
-                        <button type="button" onclick="autoCalculateUsage()" class="w-full bg-blue-50 text-blue-600 py-2 rounded-lg hover:bg-blue-100 transition font-medium text-sm border border-blue-200">
+                        <button type="button" onclick="autoCalculateUsage()" class="w-full bg-blue-50 text-blue-600 py-2 rounded-lg hover:bg-blue-100 transition font-medium text-sm border border-blue-200 auto-calc-element">
                             <i class="fas fa-calculator mr-1"></i>
                             根据费用计算用量
                         </button>
@@ -772,6 +772,27 @@
             } else {
                 badge.classList.add('hidden');
                 subtitle.textContent = `横轴：月份 | 纵轴：用量/费用`;
+            }
+            
+            // 显示/隐藏自动计算相关元素（电费有峰谷，不支持）
+            const autoCalcElements = document.querySelectorAll('.auto-calc-element');
+            const usageInput = document.getElementById('entryUsage');
+            if (currentType === 'electricity') {
+                // 电费隐藏自动计算按钮和提示
+                autoCalcElements.forEach(el => el.classList.add('hidden'));
+                // 恢复用量输入框为必填
+                if (usageInput) {
+                    usageInput.placeholder = '0.00';
+                    usageInput.required = true;
+                }
+            } else {
+                // 水费、燃气费显示自动计算按钮
+                autoCalcElements.forEach(el => el.classList.remove('hidden'));
+                // 用量输入框设为可选
+                if (usageInput) {
+                    usageInput.placeholder = '留空则自动计算';
+                    usageInput.required = false;
+                }
             }
             
             updateTierSettingsUI();
