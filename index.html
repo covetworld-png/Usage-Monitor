@@ -248,13 +248,22 @@
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-1" id="usageLabel">用量</label>
-                                <input type="number" id="entryUsage" step="0.01" required placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition">
+                                <input type="number" id="entryUsage" step="0.01" placeholder="留空则自动计算" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 mb-1">费用金额 (¥)</label>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">费用金额 (¥) <span class="text-red-500">*</span></label>
                                 <input type="number" id="entryCost" step="0.01" required placeholder="0.00" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-gray-500 focus:border-gray-500 transition">
                             </div>
                         </div>
+                        <!-- 自动计算提示 -->
+                        <div id="autoCalcHint" class="hidden text-xs text-blue-600 bg-blue-50 p-2 rounded-lg">
+                            <i class="fas fa-calculator mr-1"></i>
+                            <span id="calcResult"></span>
+                        </div>
+                        <button type="button" onclick="autoCalculateUsage()" class="w-full bg-blue-50 text-blue-600 py-2 rounded-lg hover:bg-blue-100 transition font-medium text-sm border border-blue-200">
+                            <i class="fas fa-calculator mr-1"></i>
+                            根据费用计算用量
+                        </button>
                         <button type="submit" class="w-full bg-gray-800 text-white py-2 rounded-lg hover:bg-gray-900 transition font-medium shadow-md">
                             保存记录
                         </button>
@@ -483,9 +492,9 @@
         };
 
         let tierSettings = {
-            electricity: { tier1: 260, tier2: 600 },
-            water: { tier1: 180, tier2: 260 },
-            gas: { tier1: 300, tier2: 600 }
+            electricity: { tier1: 260, tier2: 600 }, // 电费有峰谷，暂不配置单价
+            water: { tier1: 220, tier2: 300, price1: 4.05, price2: 5.80, price3: 8.79 },
+            gas: { tier1: 310, tier2: 520, price1: 3.00, price2: 3.30, price3: 4.20 }
         };
 
         function detectFields(record, type) {
@@ -797,50 +806,116 @@
             if (!container || !settings || !config) return;
             
             container.innerHTML = `
-                <div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div class="flex items-center">
-                        <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
-                        <span class="text-sm font-medium text-green-800">第一阶梯</span>
+                <div class="p-3 bg-green-50 rounded-lg border border-green-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-green-500 mr-2"></div>
+                            <span class="text-sm font-medium text-green-800">第一阶梯</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-green-600">0 -</span>
+                            <input type="number" value="${settings.tier1}" onchange="updateTierSettings(${settings.tier2}, this.value, ${settings.price1 || 0}, ${settings.price2 || 0}, ${settings.price3 || 0})" class="w-14 px-1 py-1 text-sm border border-green-300 rounded text-center">
+                            <span class="text-xs text-green-600">${config.unit}</span>
+                        </div>
                     </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-xs text-green-600">0 -</span>
-                        <input type="number" value="${settings.tier1}" onchange="updateTierSettings(${settings.tier2}, this.value)" class="w-16 px-2 py-1 text-sm border border-green-300 rounded text-center">
-                        <span class="text-xs text-green-600">${config.unit}</span>
-                    </div>
-                </div>
-                
-                <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                    <div class="flex items-center">
-                        <div class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
-                        <span class="text-sm font-medium text-yellow-800">第二阶梯</span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-xs text-yellow-600">${parseInt(settings.tier1) + 1} -</span>
-                        <input type="number" value="${settings.tier2}" onchange="updateTierSettings(this.value, ${settings.tier1})" class="w-16 px-2 py-1 text-sm border border-yellow-300 rounded text-center">
-                        <span class="text-xs text-yellow-600">${config.unit}</span>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-green-600">单价 (¥):</span>
+                        <input type="number" step="0.01" value="${settings.price1 || ''}" placeholder="未设置" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, this.value, ${settings.price2 || 0}, ${settings.price3 || 0})" class="w-20 px-2 py-1 text-sm border border-green-300 rounded text-center">
                     </div>
                 </div>
                 
-                <div class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                    <div class="flex items-center">
-                        <div class="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
-                        <span class="text-sm font-medium text-red-800">第三阶梯</span>
+                <div class="p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></div>
+                            <span class="text-sm font-medium text-yellow-800">第二阶梯</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-yellow-600">${parseInt(settings.tier1) + 1} -</span>
+                            <input type="number" value="${settings.tier2}" onchange="updateTierSettings(this.value, ${settings.tier1}, ${settings.price1 || 0}, ${settings.price2 || 0}, ${settings.price3 || 0})" class="w-14 px-1 py-1 text-sm border border-yellow-300 rounded text-center">
+                            <span class="text-xs text-yellow-600">${config.unit}</span>
+                        </div>
                     </div>
-                    <span class="text-xs text-red-600">${parseInt(settings.tier2) + 1} ${config.unit}以上</span>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-yellow-600">单价 (¥):</span>
+                        <input type="number" step="0.01" value="${settings.price2 || ''}" placeholder="未设置" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, ${settings.price1 || 0}, this.value, ${settings.price3 || 0})" class="w-20 px-2 py-1 text-sm border border-yellow-300 rounded text-center">
+                    </div>
+                </div>
+                
+                <div class="p-3 bg-red-50 rounded-lg border border-red-200">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 rounded-full bg-red-500 mr-2"></div>
+                            <span class="text-sm font-medium text-red-800">第三阶梯</span>
+                        </div>
+                        <span class="text-xs text-red-600">${parseInt(settings.tier2) + 1} ${config.unit}以上</span>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <span class="text-red-600">单价 (¥):</span>
+                        <input type="number" step="0.01" value="${settings.price3 || ''}" placeholder="未设置" onchange="updateTierSettings(${settings.tier2}, ${settings.tier1}, ${settings.price1 || 0}, ${settings.price2 || 0}, this.value)" class="w-20 px-2 py-1 text-sm border border-red-300 rounded text-center">
+                    </div>
                 </div>
             `;
         }
 
-        function updateTierSettings(tier2, tier1) {
-            tierSettings[currentType] = {
+        function updateTierSettings(tier2, tier1, price1, price2, price3) {
+            const settings = {
                 tier1: parseInt(tier1) || 0,
                 tier2: parseInt(tier2) || 0
             };
+            // 如果传入了价格，也更新价格
+            if (price1 !== undefined) settings.price1 = parseFloat(price1) || 0;
+            if (price2 !== undefined) settings.price2 = parseFloat(price2) || 0;
+            if (price3 !== undefined) settings.price3 = parseFloat(price3) || 0;
+            
+            tierSettings[currentType] = settings;
             saveToLocalStorage();
             updateTierSettingsUI();
             updateCurrentTierDisplay();
             if (currentView === 'tier') updateTierView();
             showToast('阶梯设置已更新');
+        }
+
+        // 根据费用计算用量（反推算法）
+        function calculateUsageFromCost(cost, type = currentType) {
+            const settings = tierSettings[type];
+            if (!settings || !settings.price1) {
+                // 没有价格配置，无法计算
+                return null;
+            }
+            
+            const { tier1, tier2, price1, price2, price3 } = settings;
+            
+            // 计算各阶梯满额费用
+            const maxCostTier1 = tier1 * price1;
+            const maxCostTier2 = maxCostTier1 + (tier2 - tier1) * price2;
+            
+            let usage = 0;
+            let tierBreakdown = '';
+            
+            if (cost <= maxCostTier1) {
+                // 在第一阶梯内
+                usage = cost / price1;
+                tierBreakdown = `第一阶梯`;
+            } else if (cost <= maxCostTier2) {
+                // 在第二阶梯内
+                const costInTier2 = cost - maxCostTier1;
+                const usageInTier2 = costInTier2 / price2;
+                usage = tier1 + usageInTier2;
+                tierBreakdown = `第一阶梯 ${tier1}${TYPE_CONFIG[type].unit} + 第二阶梯 ${usageInTier2.toFixed(1)}${TYPE_CONFIG[type].unit}`;
+            } else {
+                // 在第三阶梯
+                const costInTier3 = cost - maxCostTier2;
+                const usageInTier3 = costInTier3 / price3;
+                usage = tier2 + usageInTier3;
+                tierBreakdown = `第一阶梯 ${tier1}${TYPE_CONFIG[type].unit} + 第二阶梯 ${tier2 - tier1}${TYPE_CONFIG[type].unit} + 第三阶梯 ${usageInTier3.toFixed(1)}${TYPE_CONFIG[type].unit}`;
+            }
+            
+            return {
+                usage: usage,
+                breakdown: tierBreakdown,
+                tier: cost <= maxCostTier1 ? 1 : (cost <= maxCostTier2 ? 2 : 3)
+            };
         }
 
         function addRecord(date, usage, cost, skipSave = false) {
@@ -2108,25 +2183,111 @@
             }
         }
 
+        // 防抖函数
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // 手动触发计算用量
+        function autoCalculateUsage() {
+            const costInput = document.getElementById('entryCost');
+            const usageInput = document.getElementById('entryUsage');
+            
+            if (!costInput || !usageInput) return;
+            
+            const cost = parseFloat(costInput.value);
+            if (isNaN(cost) || cost <= 0) {
+                showToast('请先输入有效的费用金额');
+                return;
+            }
+            
+            const result = calculateUsageFromCost(cost);
+            if (!result) {
+                showToast('当前类型未配置阶梯单价，无法计算');
+                return;
+            }
+            
+            usageInput.value = result.usage.toFixed(2);
+            showToast(`已计算: ${result.usage.toFixed(1)}${TYPE_CONFIG[currentType].unit} (${result.breakdown})`);
+            
+            // 隐藏提示
+            const hintEl = document.getElementById('autoCalcHint');
+            if (hintEl) hintEl.classList.add('hidden');
+        }
+
         function setupEventListeners() {
             const form = document.getElementById('entryForm');
             if (form) {
                 form.addEventListener('submit', (e) => {
                     e.preventDefault();
                     const date = document.getElementById('entryDate').value;
-                    const usage = parseFloat(document.getElementById('entryUsage').value);
+                    let usage = parseFloat(document.getElementById('entryUsage').value);
                     const cost = parseFloat(document.getElementById('entryCost').value);
+
+                    // 如果用量为空，尝试根据费用自动计算
+                    if (date && isNaN(usage) && !isNaN(cost) && cost > 0) {
+                        const result = calculateUsageFromCost(cost);
+                        if (result) {
+                            usage = result.usage;
+                            // 回填计算结果到输入框
+                            document.getElementById('entryUsage').value = usage.toFixed(2);
+                            showToast(`自动计算用量: ${usage.toFixed(1)}${TYPE_CONFIG[currentType].unit}`);
+                        } else {
+                            showToast('未能自动计算用量，请手动输入');
+                            return;
+                        }
+                    }
 
                     if (date && !isNaN(usage) && !isNaN(cost)) {
                         if (addRecord(date, usage, cost)) {
                             form.reset();
                             const dateInput = document.getElementById('entryDate');
                             if (dateInput) dateInput.value = date;
+                            // 隐藏计算提示
+                            const hintEl = document.getElementById('autoCalcHint');
+                            if (hintEl) hintEl.classList.add('hidden');
                             showToast('添加成功');
                         }
                     } else {
                         showToast('请输入有效数值');
                     }
+                });
+            }
+
+            // 费用输入框实时计算提示
+            const costInput = document.getElementById('entryCost');
+            const usageInput = document.getElementById('entryUsage');
+            if (costInput && usageInput) {
+                costInput.addEventListener('input', debounce(() => {
+                    const cost = parseFloat(costInput.value);
+                    if (!isNaN(cost) && cost > 0 && !usageInput.value) {
+                        const result = calculateUsageFromCost(cost);
+                        if (result) {
+                            const hintEl = document.getElementById('autoCalcHint');
+                            const resultEl = document.getElementById('calcResult');
+                            if (hintEl && resultEl) {
+                                resultEl.textContent = `预估用量: ${result.usage.toFixed(1)}${TYPE_CONFIG[currentType].unit} (${result.breakdown})`;
+                                hintEl.classList.remove('hidden');
+                            }
+                        }
+                    } else {
+                        const hintEl = document.getElementById('autoCalcHint');
+                        if (hintEl) hintEl.classList.add('hidden');
+                    }
+                }, 300));
+                
+                // 用户开始输入用量时隐藏提示
+                usageInput.addEventListener('input', () => {
+                    const hintEl = document.getElementById('autoCalcHint');
+                    if (hintEl) hintEl.classList.add('hidden');
                 });
             }
 
