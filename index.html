@@ -325,7 +325,7 @@
                             <i class="fas fa-calculator mr-1"></i>
                             <span id="calcResult"></span>
                         </div>
-                        <button type="button" onclick="autoCalculateUsage()" class="w-full bg-blue-50 text-blue-600 py-2 rounded-lg hover:bg-blue-100 transition font-medium text-sm border border-blue-200 auto-calc-element">
+                        <button type="button" onclick="autoCalculateUsage(event)" class="w-full bg-blue-50 text-blue-600 py-2 rounded-lg hover:bg-blue-100 transition font-medium text-sm border border-blue-200 auto-calc-element">
                             <i class="fas fa-calculator mr-1"></i>
                             根据费用计算用量
                         </button>
@@ -2672,9 +2672,24 @@
         }
 
         // 手动触发计算用量
-        function autoCalculateUsage() {
-            const costInput = document.getElementById('entryCost');
-            const usageInput = document.getElementById('entryUsage');
+        function autoCalculateUsage(event) {
+            // 确定是在桌面端还是移动端调用
+            let costInput, usageInput, hintEl;
+            
+            if (event && event.target) {
+                // 从按钮找到所在的表单容器
+                const container = event.target.closest('form') || event.target.closest('.space-y-3') || event.target.closest('#mobileSettingsContent');
+                if (container) {
+                    costInput = container.querySelector('#entryCost');
+                    usageInput = container.querySelector('#entryUsage');
+                    hintEl = container.querySelector('#autoCalcHint');
+                }
+            }
+            
+            // 如果没找到，回退到原来的方式
+            if (!costInput) costInput = document.getElementById('entryCost');
+            if (!usageInput) usageInput = document.getElementById('entryUsage');
+            if (!hintEl) hintEl = document.getElementById('autoCalcHint');
             
             if (!costInput || !usageInput) return;
             
@@ -2694,7 +2709,6 @@
             showToast(`已计算: ${result.usage.toFixed(1)}${TYPE_CONFIG[currentType].unit} (${result.breakdown})`);
             
             // 隐藏提示
-            const hintEl = document.getElementById('autoCalcHint');
             if (hintEl) hintEl.classList.add('hidden');
         }
 
