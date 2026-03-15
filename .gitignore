@@ -41,3 +41,7 @@ coverage/
 
 # Screenshots (for documentation)
 screenshots/
+
+# Other projects (in parent git repo)
+game-crm/
+stock-finder/

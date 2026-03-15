@@ -627,7 +627,9 @@
         async function loadFromDataFolder() {
     // 优先尝试读取总文件 data.json（包含所有类型的完整导出格式）
     try {
-        const response = await fetch('data/data.json');
+        // 添加时间戳参数避免浏览器缓存
+        const cacheBuster = `?t=${Date.now()}`;
+        const response = await fetch('data/data.json' + cacheBuster);
         if (response.ok) {
             const data = await response.json();
             

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>测试数据加载</title>
+</head>
+<body>
+    <h1>测试数据加载</h1>
+    <button onclick="testDataLoad()">测试加载 data/data.json</button>
+    <div id="result"></div>
+
+    <script>
+        async function testDataLoad() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '正在加载...';
+
+            try {
+                const response = await fetch('data/data.json');
+                if (response.ok) {
+                    const data = await response.json();
+                    resultDiv.innerHTML = `
+                        <h3>加载成功！</h3>
+                        <p>版本: ${data.version}</p>
+                        <p>导出日期: ${data.exportDate}</p>
+                        <p>电费记录数: ${data.data.electricity?.length || 0}</p>
+                        <p>水费记录数: ${data.data.water?.length || 0}</p>
+                        <p>燃气记录数: ${data.data.gas?.length || 0}</p>
+                        <pre>${JSON.stringify(data, null, 2).substring(0, 1000)}...</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `加载失败: ${response.status} ${response.statusText}`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `错误: ${error.message}`;
+            }
+        }
+
+        // 自动测试
+        setTimeout(testDataLoad, 100);
+    </script>
+</body>
+</html>
