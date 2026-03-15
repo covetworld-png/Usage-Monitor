@@ -102,26 +102,26 @@
                     <i class="fas fa-home text-xl sm:text-2xl text-white/90"></i>
                     <span class="font-bold text-lg sm:text-xl tracking-tight">家庭能耗管家</span>
                 </div>
-                <div class="flex items-center space-x-2 sm:space-x-3">
-                    <button onclick="saveToGitHub()" class="px-2 sm:px-3 py-2 bg-green-500 hover:bg-green-600 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-sm" title="提交到GitHub">
+                <div class="flex items-center space-x-1 sm:space-x-3">
+                    <button onclick="saveToGitHub()" class="px-2 sm:px-3 py-2 bg-green-500 hover:bg-green-600 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm" title="提交到GitHub">
                         <i class="fab fa-github"></i>
                         <span class="hidden sm:inline">保存到GitHub</span>
                     </button>
-                    <button onclick="showGitHubSettings()" class="px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-sm" title="GitHub设置">
+                    <button onclick="showGitHubSettings()" class="px-2 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center justify-center text-sm" title="GitHub设置">
                         <i class="fas fa-cog"></i>
                     </button>
-                    <button onclick="checkDataStatus()" class="px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-sm" title="检查数据状态">
+                    <button onclick="checkDataStatus()" class="hidden sm:flex px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition items-center space-x-1 sm:space-x-2 text-sm" title="检查数据状态">
                         <i class="fas fa-stethoscope"></i>
                     </button>
-                    <button onclick="syncFromDataFolder()" class="px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-sm" title="从data文件夹重新加载">
+                    <button onclick="syncFromDataFolder()" class="hidden sm:flex px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition items-center space-x-1 sm:space-x-2 text-sm" title="从data文件夹重新加载">
                         <i class="fas fa-sync-alt"></i>
                         <span class="hidden sm:inline">同步数据</span>
                     </button>
-                    <button onclick="exportAllData()" class="px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-sm">
+                    <button onclick="exportAllData()" class="px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
                         <i class="fas fa-download"></i>
-                        <span class="hidden sm:inline">导出全部</span>
+                        <span class="hidden sm:inline">导出</span>
                     </button>
-                    <button onclick="document.getElementById('fileInput').click()" class="px-2 sm:px-3 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 transition font-medium flex items-center space-x-1 sm:space-x-2 text-sm">
+                    <button onclick="document.getElementById('fileInput').click()" class="px-2 sm:px-3 py-2 bg-white text-indigo-600 rounded-lg hover:bg-gray-100 transition font-medium flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm">
                         <i class="fas fa-file-import"></i>
                         <span class="hidden sm:inline">导入恢复</span>
                     </button>
@@ -2796,6 +2796,8 @@
                     setTimeout(() => {
                         mobileSettingsDrawer.querySelector('.absolute').classList.remove('translate-x-full');
                     }, 10);
+                    // Reattach event listeners for the drawer content
+                    attachTierSettingsListeners();
                 });
 
                 closeDrawerBtn.addEventListener('click', () => {
@@ -2851,14 +2853,29 @@
                     if (mobileForm) {
                         mobileForm.addEventListener('submit', (e) => {
                             e.preventDefault();
-                            const date = mobileSettingsContent.querySelector('#entryDate').value;
-                            const usage = parseFloat(mobileSettingsContent.querySelector('#entryUsage').value);
-                            const cost = parseFloat(mobileSettingsContent.querySelector('#entryCost').value);
+                            const dateInput = mobileSettingsContent.querySelector('#entryDate');
+                            const usageInput = mobileSettingsContent.querySelector('#entryUsage');
+                            const costInput = mobileSettingsContent.querySelector('#entryCost');
+                            
+                            const date = dateInput ? dateInput.value : '';
+                            let usage = parseFloat(usageInput ? usageInput.value : '');
+                            const cost = parseFloat(costInput ? costInput.value : '');
+
+                            // 如果用量为空，尝试根据费用自动计算
+                            if (date && isNaN(usage) && !isNaN(cost) && cost > 0) {
+                                const result = calculateUsageFromCost(cost);
+                                if (result) {
+                                    usage = result.usage;
+                                    if (usageInput) usageInput.value = usage.toFixed(2);
+                                } else {
+                                    showToast('当前类型未配置阶梯单价，无法计算用量');
+                                    return;
+                                }
+                            }
 
                             if (date && !isNaN(usage) && !isNaN(cost)) {
                                 if (addRecord(date, usage, cost)) {
                                     mobileForm.reset();
-                                    const dateInput = mobileSettingsContent.querySelector('#entryDate');
                                     if (dateInput) dateInput.value = date;
                                     showToast('添加成功');
                                     // Close drawer after adding record
