@@ -1515,8 +1515,8 @@
                 const isVisible = visibleYears.has(year);
                 const color = colors[index % colors.length];
                 return `
-                    <button onclick="toggleYear('${year}')" class="year-toggle px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all duration-200 ${isVisible ? '' : 'inactive'}" style="${isVisible ? `background-color: ${color}20; border-color: ${color}; color: ${color}` : ''}">
-                        <i class="fas ${isVisible ? 'fa-eye' : 'fa-eye-slash'} mr-1"></i>${year}年
+                    <button onclick="toggleYear('${year}')" class="year-toggle px-1.5 py-0.5 rounded text-xs font-medium border transition-all duration-200 ${isVisible ? '' : 'inactive'}" style="${isVisible ? `background-color: ${color}20; border-color: ${color}; color: ${color}` : ''}">
+                        <i class="fas ${isVisible ? 'fa-eye' : 'fa-eye-slash'} mr-0.5 text-[10px]"></i>${year}
                     </button>`;
             }).join('');
         }
@@ -1539,7 +1539,7 @@
                     const isSelected = year === selectedTierYear;
                     const color = colors[index % colors.length];
                     return `
-                        <button onclick="changeTierYear('${year}')" class="year-toggle px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-all duration-200 ${isSelected ? 'ring-2 ring-offset-1' : 'inactive'}" 
+                        <button onclick="changeTierYear('${year}')" class="year-toggle px-1.5 py-0.5 rounded text-xs font-medium border transition-all duration-200 ${isSelected ? 'ring-1 ring-offset-1' : 'inactive'}" 
                             style="${isSelected ? `background-color: ${color}; border-color: ${color}; color: white; --tw-ring-color: ${color}` : ''}">
                             ${year}年
                         </button>`;
