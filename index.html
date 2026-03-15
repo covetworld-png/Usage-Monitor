@@ -2474,8 +2474,9 @@
                     console.log('File may not exist yet, will create new file');
                 }
 
-                // 提交文件
-                const commitMessage = `更新数据 - ${new Date().toLocaleString('zh-CN')}`;
+                // 提交文件（使用英文避免编码问题）
+                const now = new Date();
+                const commitMessage = `Update data - ${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
                 const body = {
                     message: commitMessage,
                     content: contentBase64,
