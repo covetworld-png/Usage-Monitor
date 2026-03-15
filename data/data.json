@@ -509,17 +509,7 @@
       }
     ],
     "gas": [
-      {
-        "date": "2022-01",
-        "usage": 59,
-        "cost": 177,
-        "timestamp": "2026-03-07T15:27:41.394Z",
-        "source": "manual",
-        "_originalFields": {
-          "usageField": "usage",
-          "costField": "cost"
-        }
-      },
+
       {
         "date": "2023-01",
         "usage": 66,
