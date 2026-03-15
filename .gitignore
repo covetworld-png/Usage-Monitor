@@ -45,3 +45,6 @@ screenshots/
 # Other projects (in parent git repo)
 game-crm/
 stock-finder/
+
+# Sensitive token file
+token.md
