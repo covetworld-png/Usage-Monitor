@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "exportDate": "2026-03-15T06:40:17.197Z",
+  "exportDate": "2026-03-15T10:51:39.426Z",
   "data": {
     "electricity": [
       {
@@ -505,11 +505,14 @@
         "usage": 25,
         "cost": 101.3,
         "timestamp": "2026-03-15T06:39:50.588Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       }
     ],
     "gas": [
-
       {
         "date": "2023-01",
         "usage": 66,
