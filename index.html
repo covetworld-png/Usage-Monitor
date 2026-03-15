@@ -2454,6 +2454,12 @@
             }
 
             showToast('正在提交到 GitHub...');
+            
+            // 调试：检查 Token 格式
+            console.log('Token 前 10 位:', githubConfig.token.substring(0, 10) + '...');
+            console.log('Token 长度:', githubConfig.token.length);
+            console.log('Owner:', githubConfig.owner);
+            console.log('Repo:', githubConfig.repo);
 
             try {
                 // 准备数据
