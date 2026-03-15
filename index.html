@@ -2461,8 +2461,8 @@
                         `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${githubConfig.path}?ref=${githubConfig.branch}`,
                         {
                             headers: {
-                                'Authorization': `token ${githubConfig.token}`,
-                                'Accept': 'application/vnd.github.v3+json'
+                                'Authorization': `Bearer ${githubConfig.token}`,
+                                'Accept': 'application/vnd.github+json',\n                                'X-GitHub-Api-Version': '2022-11-28'
                             }
                         }
                     );
@@ -2492,8 +2492,8 @@
                     {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `token ${githubConfig.token}`,
-                            'Accept': 'application/vnd.github.v3+json',
+                            'Authorization': `Bearer ${githubConfig.token}`,
+                            'Accept': 'application/vnd.github+json',\n                            'X-GitHub-Api-Version': '2022-11-28',
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify(body)
