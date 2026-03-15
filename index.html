@@ -113,7 +113,7 @@
                     <button onclick="checkDataStatus()" class="hidden sm:flex px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition items-center space-x-1 sm:space-x-2 text-sm" title="检查数据状态">
                         <i class="fas fa-stethoscope"></i>
                     </button>
-                    <button onclick="syncFromDataFolder()" class="px-2 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center justify-center text-sm" title="从data文件夹重新加载">
+                    <button onclick="syncFromDataFolder()" class="px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-xs sm:text-sm" title="从data文件夹重新加载">
                         <i class="fas fa-sync-alt"></i>
                         <span class="hidden sm:inline">同步</span>
                     </button>
@@ -720,16 +720,28 @@
             // 检查是否为完整导出格式（包含 version 和 data 字段）
             if (data.version && data.data) {
                 let totalNew = 0;
+                let totalDeleted = 0;
                 
                 // 解析各类型数据
                 Object.keys(data.data).forEach(type => {
                     if (allData[type] && Array.isArray(data.data[type])) {
-                        const existingDates = new Set(allData[type].map(r => r.date));
+                        const remoteDates = new Set(data.data[type].map(r => r.date));
+                        const localDates = new Set(allData[type].map(r => r.date));
+                        
+                        // 添加本地没有的新记录
                         const newData = data.data[type]
-                            .filter(r => !existingDates.has(r.date))
+                            .filter(r => !localDates.has(r.date))
                             .map(r => sanitizeRecord(r, type));
+                        
+                        // 删除本地有但远程没有的记录
+                        const deletedCount = allData[type].filter(r => !remoteDates.has(r.date)).length;
+                        allData[type] = allData[type].filter(r => remoteDates.has(r.date));
+                        
+                        // 合并新数据
                         allData[type] = [...allData[type], ...newData].sort((a, b) => a.date.localeCompare(b.date));
+                        
                         totalNew += newData.length;
+                        totalDeleted += deletedCount;
                     }
                 });
                 
@@ -738,9 +750,12 @@
                     tierSettings = { ...tierSettings, ...data.tierSettings };
                 }
                 
-                if (totalNew > 0) {
+                if (totalNew > 0 || totalDeleted > 0) {
                     saveToLocalStorage();
-                    showToast(`已同步 ${totalNew} 条新记录`);
+                    let msg = '';
+                    if (totalNew > 0) msg += `新增 ${totalNew} 条`;
+                    if (totalDeleted > 0) msg += (msg ? '，' : '') + `删除 ${totalDeleted} 条`;
+                    showToast(`已同步：${msg}`);
                 } else {
                     showToast('数据已为最新');
                 }
@@ -946,7 +961,10 @@
             const config = TYPE_CONFIG[currentType];
             if (!config) return;
             
-            document.getElementById('stat-label-1').textContent = `本年度${config.name}`;
+            // 移动端使用简称，避免换行
+const isMobile = window.innerWidth < 640;
+const shortNames = { electricity: '电费', water: '水费', gas: '燃气' };
+document.getElementById('stat-label-1').textContent = isMobile ? `本年${shortNames[currentType]}` : `本年度${config.name}`;
             document.getElementById('stat-label-2').textContent = `本年度用量`;
             document.getElementById('usageLabel').textContent = `用量 (${config.unit})`;
             document.getElementById('metricLabelUsage').textContent = `用量 (${config.unit})`;
