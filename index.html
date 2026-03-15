@@ -110,6 +110,9 @@
                     <button onclick="showGitHubSettings()" class="px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-sm" title="GitHub设置">
                         <i class="fas fa-cog"></i>
                     </button>
+                    <button onclick="checkDataStatus()" class="px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-sm" title="检查数据状态">
+                        <i class="fas fa-stethoscope"></i>
+                    </button>
                     <button onclick="syncFromDataFolder()" class="px-2 sm:px-3 py-2 bg-white/20 hover:bg-white/30 rounded-lg transition flex items-center space-x-1 sm:space-x-2 text-sm" title="从data文件夹重新加载">
                         <i class="fas fa-sync-alt"></i>
                         <span class="hidden sm:inline">同步数据</span>
@@ -647,6 +650,10 @@
             loadFromDataFolder();
             setupEventListeners();
             setupDragAndDrop();
+            
+            // 调试：显示 LocalStorage 数据状态
+            console.log('Data loaded:', JSON.parse(JSON.stringify(allData)));
+            console.log('LocalStorage utilityData:', localStorage.getItem('utilityData') ? '存在' : '不存在');
 
             // 添加窗口大小改变时的重绘处理
             let resizeTimer;
@@ -2562,6 +2569,40 @@
             reader.readAsText(file);
         }
         
+        // 诊断：检查数据状态
+        function checkDataStatus() {
+            const storageData = localStorage.getItem('utilityData');
+            let message = '=== 数据诊断 ===\n\n';
+            
+            // 检查内存中的数据
+            message += '【内存数据】\n';
+            message += `- 电费: ${allData.electricity.length} 条\n`;
+            message += `- 水费: ${allData.water.length} 条\n`;
+            message += `- 燃气: ${allData.gas.length} 条\n\n`;
+            
+            // 检查 LocalStorage
+            message += '【LocalStorage】\n';
+            if (storageData) {
+                try {
+                    const parsed = JSON.parse(storageData);
+                    message += `- 存储状态: ✅ 有数据\n`;
+                    message += `- 电费: ${parsed.data?.electricity?.length || 0} 条\n`;
+                    message += `- 水费: ${parsed.data?.water?.length || 0} 条\n`;
+                    message += `- 燃气: ${parsed.data?.gas?.length || 0} 条\n`;
+                    message += `- 最后更新: ${parsed.lastUpdate || '未知'}\n`;
+                } catch (e) {
+                    message += `- 存储状态: ❌ 数据损坏\n`;
+                    message += `- 错误: ${e.message}\n`;
+                }
+            } else {
+                message += `- 存储状态: ❌ 无数据\n`;
+            }
+            
+            // 显示诊断信息
+            alert(message);
+            console.log(message);
+        }
+
         function detectDataType(data) {
             if (!Array.isArray(data) || data.length === 0) return currentType;
             
