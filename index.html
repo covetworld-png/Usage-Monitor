@@ -625,6 +625,15 @@
         }
 
         async function loadFromDataFolder() {
+    // 检测是否在 file:// 协议下运行
+    const isFileProtocol = window.location.protocol === 'file:';
+    
+    if (isFileProtocol) {
+        // 在 file:// 协议下，提示用户需要使用本地服务器或手动导入
+        showFileProtocolDialog();
+        return;
+    }
+    
     // 优先尝试读取总文件 data.json（包含所有类型的完整导出格式）
     try {
         // 添加时间戳参数避免浏览器缓存
@@ -712,6 +721,99 @@
     updateUI();
     updateBadges();
 }
+
+        // 在 file:// 协议下显示提示对话框
+        function showFileProtocolDialog() {
+            const dialog = document.createElement('div');
+            dialog.id = 'file-protocol-dialog';
+            dialog.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            dialog.innerHTML = `
+                <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 fade-in">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center">
+                            <i class="fas fa-exclamation-triangle text-orange-500 text-xl"></i>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-800 text-center mb-2">无法自动同步数据</h3>
+                    <p class="text-gray-600 text-sm mb-4 text-center">
+                        由于浏览器安全限制，直接打开文件时无法自动读取 data/data.json。<br><br>
+                        <strong>解决方案（任选其一）：</strong>
+                    </p>
+                    <div class="space-y-3 mb-4">
+                        <div class="bg-blue-50 p-3 rounded-lg">
+                            <p class="text-sm font-medium text-blue-800">方案 1：使用本地服务器</p>
+                            <code class="text-xs bg-blue-100 px-2 py-1 rounded mt-1 block">python -m http.server 8000</code>
+                        </div>
+                        <div class="bg-green-50 p-3 rounded-lg">
+                            <p class="text-sm font-medium text-green-800">方案 2：手动导入数据</p>
+                            <p class="text-xs text-green-600 mt-1">点击"导入恢复"按钮选择 data/data.json 文件</p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button onclick="closeFileProtocolDialog()" class="flex-1 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm font-medium">
+                            关闭
+                        </button>
+                        <button onclick="triggerDataFileImport()" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition text-sm font-medium">
+                            选择数据文件
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(dialog);
+        }
+
+        // 关闭文件协议提示对话框
+        function closeFileProtocolDialog() {
+            const dialog = document.getElementById('file-protocol-dialog');
+            if (dialog) {
+                dialog.remove();
+            }
+        }
+
+        // 触发数据文件导入
+        function triggerDataFileImport() {
+            closeFileProtocolDialog();
+            // 创建临时文件输入
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                try {
+                    const text = await file.text();
+                    const data = JSON.parse(text);
+                    
+                    if (data.version && data.data) {
+                        // 新版统一格式
+                        let totalNew = 0;
+                        Object.keys(data.data).forEach(type => {
+                            if (allData[type] && Array.isArray(data.data[type])) {
+                                const existingDates = new Set(allData[type].map(r => r.date));
+                                const newData = data.data[type]
+                                    .filter(r => !existingDates.has(r.date))
+                                    .map(r => sanitizeRecord(r, type));
+                                allData[type] = [...allData[type], ...newData].sort((a, b) => a.date.localeCompare(b.date));
+                                totalNew += newData.length;
+                            }
+                        });
+                        if (data.tierSettings) {
+                            tierSettings = { ...tierSettings, ...data.tierSettings };
+                        }
+                        saveToLocalStorage();
+                        updateUI();
+                        updateBadges();
+                        showToast(`成功导入 ${totalNew} 条记录`);
+                    } else {
+                        showToast('无法识别数据格式');
+                    }
+                } catch (error) {
+                    showToast('导入失败：' + error.message);
+                }
+            };
+            input.click();
+        }
 
         function syncFromDataFolder() {
             showToast('正在同步...');
