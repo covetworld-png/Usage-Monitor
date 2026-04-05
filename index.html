@@ -2517,7 +2517,7 @@ document.getElementById('stat-label-1').textContent = isMobile ? `本年${shortN
                         `https://api.github.com/repos/${githubConfig.owner}/${githubConfig.repo}/contents/${githubConfig.path}?ref=${githubConfig.branch}`,
                         {
                             headers: {
-                                'Authorization': `Bearer ${githubConfig.token}`,
+                                'Authorization': `token ${githubConfig.token}`,
                                 'Accept': 'application/vnd.github+json',
                             'X-GitHub-Api-Version': '2022-11-28'
                             }
@@ -2549,7 +2549,7 @@ document.getElementById('stat-label-1').textContent = isMobile ? `本年${shortN
                     {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `Bearer ${githubConfig.token}`,
+                            'Authorization': `token ${githubConfig.token}`,
                             'Accept': 'application/vnd.github+json',
                             'X-GitHub-Api-Version': '2022-11-28',
                             'Content-Type': 'application/json'
