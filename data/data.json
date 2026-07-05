@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "exportDate": "2026-07-05T16:57:55.341Z",
+  "exportDate": "2026-07-05T17:00:16.951Z",
   "data": {
     "electricity": [
       {
@@ -803,7 +803,7 @@
         "date": "2026-07",
         "usage": 27,
         "cost": 81,
-        "timestamp": "2026-07-05T16:57:50.777Z",
+        "timestamp": "2026-07-05T17:00:02.209Z",
         "source": "manual"
       }
     ]
