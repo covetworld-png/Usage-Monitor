@@ -1,6 +1,6 @@
 {
   "version": "2.0",
-  "exportDate": "2026-07-02T03:23:23.022Z",
+  "exportDate": "2026-07-05T16:57:55.341Z",
   "data": {
     "electricity": [
       {
@@ -316,14 +316,22 @@
         "usage": 338,
         "cost": 176.3,
         "timestamp": "2026-07-02T03:22:26.346Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       },
       {
         "date": "2026-06",
         "usage": 354,
         "cost": 182.7,
         "timestamp": "2026-07-02T03:22:44.118Z",
-        "source": "manual"
+        "source": "manual",
+        "_originalFields": {
+          "usageField": "usage",
+          "costField": "cost"
+        }
       }
     ],
     "water": [
@@ -790,6 +798,13 @@
           "usageField": "usage",
           "costField": "cost"
         }
+      },
+      {
+        "date": "2026-07",
+        "usage": 27,
+        "cost": 81,
+        "timestamp": "2026-07-05T16:57:50.777Z",
+        "source": "manual"
       }
     ]
   },
